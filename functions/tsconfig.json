@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "noImplicitReturns": true,
+    "removeComments": true,
+    "outDir": "lib",
+    "sourceMap": true,
+    "strict": true,
+    "target": "es2015",
+    "lib": ["es2015", "dom"],
+    "typeRoots": [
+//      "node_modules/@types"
+    ]
+  },
+  "compileOnSave": true,
+  "include": [
+    "src"
+  ],
+  "exclude": ["node_modules","**/*.spec.ts", "**/*.test.ts"]
+}
+
+// {
+//   "compilerOptions": {
+//     "module": "commonjs",
+//     "noImplicitReturns": true,
+//     "noUnusedLocals": true,
+//     "outDir": "lib",
+//     "sourceMap": true,
+//     "strict": true,
+//     "target": "es2015"
+//   },
+//   "compileOnSave": true,
+//   "include": [
+//     "src", "tests/user.test.ts"
+//   ]
+// }
