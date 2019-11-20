@@ -1,4 +1,4 @@
-import { FieldValue } from '@google-cloud/firestore';
+import { FieldValue } from '@google-cloud/firestore'
 
 //Event type
 export enum EventType {
@@ -39,7 +39,7 @@ export type Uri = string
 //It is used for user presence on Realtime Database
 export type UserOnlineStatus = {
   state: OnlineState
-  joinedRoom: RoomId
+  joinedRoomId: RoomId
   lastSeenAt: Timestamp
 }
 
@@ -48,12 +48,13 @@ export type User = {
   userId: UserId
   phoneNumber: string
   nickname: string
+  locale: string
+  avatar?: Uri
+  pushToken?: string
   registeredAt: Timestamp
   updatedAt?: Timestamp
   leftAt?: Timestamp
   lastSeenAt?: Timestamp
-  avatar?: Uri
-  pushToken?: string
 }
 
 //User type in a room
@@ -71,11 +72,11 @@ export type RoomLastMessage = {
 }
 
 //Room type
-export interface PrivateRoom extends GroupRoom{
+export interface PrivateRoom extends GroupRoom {
   userIdMap: { [key: string]: boolean | FieldValue }
 }
 
-export interface GroupRoom  {
+export interface GroupRoom {
   name?: string
   roomId: RoomId
   createdAt: Timestamp
@@ -96,14 +97,16 @@ export type MessageMedia = {
 
 //Message type
 export type Message = {
-  requestId: MessageId
-  id: MessageId
+  requestedId: MessageId
+  messageId: MessageId
+  replyMessageId?: MessageId
   roomId: RoomId
   senderUserId: UserId
   receiverUserId: UserId
   text?: string
   media?: MessageMedia
   createdAt: Timestamp
+  deletedAt?: Timestamp
 }
 
 export { registerUser } from './user/registerUser'

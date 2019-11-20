@@ -3,8 +3,10 @@ import 'jasmine'
 import { expect } from 'chai'
 import * as functionTest from 'firebase-functions-test'
 
-import { getMyProfile, getUserProfile, leaveUser, modifyUser, registerUser } from '../src'
+import { getMyProfile, getUserProfile, leaveUser, modifyUser, registerUser, MediaType } from '../src'
 import { cleanUserDocument, getUserDocument } from '../src/lib/user'
+import {i18n} from '../src/i18n/i18n'
+import {messageMediaToTextGenerator} from '../src/lib/generator/textGenerator'
 
 const test = functionTest({
   databaseURL: 'https://younext-c23b6.firebaseio.com',
@@ -20,7 +22,8 @@ describe('cloud functions for user', () => {
     const wrapped = test.wrap(registerUser)
     const newUser = await wrapped({
       nickname: 'Smith',
-      phoneNumber: '821076546510'
+      phoneNumber: '821076546510',
+      locale:'ko-KR'
     }, {
       auth: {
         uid: authUid
@@ -36,7 +39,8 @@ describe('cloud functions for user', () => {
     const wrapped = test.wrap(registerUser)
     const newUser = await wrapped({
       nickname: 'Mark',
-      phoneNumber: '821076546511'
+      phoneNumber: '821076546511',
+      locale:'en-US'
     }, {
       auth: {
         uid: friendAuthUid

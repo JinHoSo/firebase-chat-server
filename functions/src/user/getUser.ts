@@ -1,46 +1,29 @@
-import * as functions from 'firebase-functions';
+import * as functions from 'firebase-functions'
+import { HttpsError } from 'firebase-functions/lib/providers/https'
 
-import { User, UserId } from '..';
-import { getUserDocument } from '../lib/user';
+import { User, UserId } from '..'
+import { getUserDocument } from '../lib/user'
 
-export const getMyProfile = functions.https.onCall(async (data, context): Promise<User> => {
+export const getMyProfile = functions.https.onCall(async (userData, context): Promise<User> => {
   if (!context.auth) {
-    throw 'user must be logged in'
+    throw new HttpsError('unauthenticated', 'user must be logged in')
   }
 
   const myUserId = context.auth!.uid as UserId
   const myUserDoc = await getUserDocument(myUserId)
-
-  if (!myUserDoc.exists) {
-    throw `user(${myUserId}) is not exists`
-  }
-
   const myProfileData = myUserDoc.data() as User
-
-  if(myProfileData.leftAt){
-    throw `user(${myUserId}) is already left`
-  }
 
   return myProfileData
 })
 
 export const getUserProfile = functions.https.onCall(async (userData: Pick<User, 'userId'>, context): Promise<User> => {
   if (!context.auth) {
-    throw 'user must be logged in'
+    throw new HttpsError('unauthenticated', 'user must be logged in')
   }
 
-  const {userId} = userData
+  const { userId } = userData
   const userDoc = await getUserDocument(userId)
-
-  if (!userDoc.exists) {
-    throw `user(${userId}) is not exists`
-  }
-
   const userProfileData = userDoc.data() as User
-
-  if(userProfileData.leftAt){
-    throw `user(${userId}) is already left`
-  }
 
   return userProfileData
 })

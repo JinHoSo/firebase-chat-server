@@ -1,19 +1,16 @@
-import * as functions from 'firebase-functions';
+import * as functions from 'firebase-functions'
+import { HttpsError } from 'firebase-functions/lib/providers/https'
 
-import { UserId } from '..';
-import { deleteUserDocument, getUserDocument } from '../lib/user';
+import { UserId } from '..'
+import { deleteUserDocument } from '../lib/user'
 
-export const leaveUser = functions.https.onCall(async (data, context): Promise<void> => {
+export const leaveUser = functions.https.onCall(async (userData, context): Promise<true> => {
   if (!context.auth) {
-    throw 'user must be logged in'
+    throw new HttpsError('unauthenticated', 'user must be logged in')
   }
 
   const myUserId = context.auth!.uid as UserId
-  const myUserDoc = await getUserDocument(myUserId)
-
-  if (!myUserDoc.exists) {
-    throw `user(${myUserId}) is not exists`
-  }
-
   await deleteUserDocument(myUserId)
+
+  return true
 })

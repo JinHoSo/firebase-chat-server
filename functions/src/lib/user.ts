@@ -1,13 +1,42 @@
-import { DocumentSnapshot, WriteResult } from '@google-cloud/firestore';
+import { DocumentSnapshot, WriteResult } from '@google-cloud/firestore'
+import { HttpsError } from 'firebase-functions/lib/providers/https'
 
-import { Room, RoomId, RoomUser, User, UserId } from '..';
-import { COLLECTION_GROUP_USER_NAME, firestore, userCollection } from './constration';
-import { getRoomDocument } from './room';
+import { Room, RoomId, RoomUser, User, UserId } from '..'
+import { COLLECTION_GROUP_USER_NAME, firestore, userCollection } from './firebase'
+import { getRoomDocument } from './room'
+
+export const isExistsUser = async (userId: UserId): Promise<boolean> => {
+  const userDoc = await getUserDocument(userId)
+  const user = userDoc.data() as User
+
+  if (!userDoc.exists || (user && user.leftAt)) {
+    return false
+  }
+
+  return true
+}
 
 export const getUserDocument = async (userId: UserId): Promise<DocumentSnapshot> => {
+  const userDoc = await userCollection.doc(userId).get()
+  const user = userDoc.data() as User
+
+  if (!userDoc.exists) {
+    throw new HttpsError('not-found', `user(${userId}) is not exists`, {
+      userId
+    })
+  }
+
+  if (user && user.leftAt) {
+    throw new HttpsError('unavailable', `user(${userId}) is left`, {
+      userId,
+      leftAt: user.leftAt
+    })
+  }
+
   return await userCollection.doc(userId).get()
 }
 
+//Retrieve users include user who do not exists or have left.
 export const getUserDocuments = async (userIds: UserId[]): Promise<DocumentSnapshot[]> => {
   const userRefs = userIds.map(userId => firestore.doc(`${COLLECTION_GROUP_USER_NAME}/${userId}`))
   const users = await firestore.getAll(...userRefs)
@@ -15,15 +44,15 @@ export const getUserDocuments = async (userIds: UserId[]): Promise<DocumentSnaps
   return users
 }
 
-export const isExistsUser = async (userId: UserId): Promise<boolean> => {
-  const userDoc = await getUserDocument(userId)
-  return userDoc.exists
-}
-
 export const createUserDocument = async (userId: UserId, userData: Omit<User, 'userId' | 'registeredAt'>): Promise<WriteResult> => {
   const userDoc = await getUserDocument(userId)
 
-  if (!userDoc.exists) {
+  if (userDoc.exists) {
+    throw new HttpsError('already-exists', `userId(${userId}) is already exists`, {
+      userId
+    })
+  }
+  else {
     const newUser: User = {
       ...userData,
       userId,
@@ -34,14 +63,13 @@ export const createUserDocument = async (userId: UserId, userData: Omit<User, 'u
       .doc(userId)
       .set(newUser)
   }
-  else {
-    throw `user(${userId} is already exists)`
-  }
 }
 
 export const updateUserDocument = async (userId: UserId, userData: Partial<Omit<User, 'userId'>>): Promise<WriteResult> => {
   if (!(await isExistsUser(userId))) {
-    throw `user(${userId} is not exists)`
+    throw new HttpsError('not-found', `user(${userId}) is not exists`, {
+      userId
+    })
   }
 
   const updatedUserData: Partial<User> = {
@@ -56,7 +84,9 @@ export const updateUserDocument = async (userId: UserId, userData: Partial<Omit<
 
 export const deleteUserDocument = async (userId: UserId): Promise<WriteResult> => {
   if (!(await isExistsUser(userId))) {
-    throw `user(${userId} is not exists)`
+    throw new HttpsError('not-found', `user(${userId}) is not exists`, {
+      userId
+    })
   }
 
   const deletedUserData: Pick<User, 'leftAt'> = {
@@ -70,7 +100,9 @@ export const deleteUserDocument = async (userId: UserId): Promise<WriteResult> =
 
 export const cleanUserDocument = async (userId: UserId): Promise<WriteResult> => {
   if (!(await isExistsUser(userId))) {
-    throw `user(${userId} is not exists)`
+    throw new HttpsError('not-found', `user(${userId}) is not exists`, {
+      userId
+    })
   }
 
   return await userCollection
@@ -82,7 +114,9 @@ export const getUsersInRoom = async (roomId: RoomId): Promise<RoomUser[]> => {
   const roomDoc = await getRoomDocument(roomId)
 
   if (!roomDoc.exists) {
-    throw `room(${roomId} is not exists)`
+    throw new HttpsError('not-found', `room(${roomId} is not exists)`, {
+      roomId
+    })
   }
 
   const room = roomDoc.data() as Room

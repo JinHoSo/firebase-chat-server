@@ -1,9 +1,10 @@
-import * as functions from 'firebase-functions';
+import * as functions from 'firebase-functions'
+import { HttpsError } from 'firebase-functions/lib/providers/https'
 
-import { GroupRoom, PrivateRoom, UserId } from '..';
-import { roomIdGenerator } from '../lib/generator/idGenerator';
-import { createRoomDocument, getPrivateRoomData, getRoomDocument } from '../lib/room';
-import { isExistsUser } from '../lib/user';
+import { GroupRoom, PrivateRoom, UserId } from '..'
+import { roomIdGenerator } from '../lib/generator/idGenerator'
+import { createRoomDocument, getPrivateRoomData, getRoomDocument } from '../lib/room'
+import { isExistsUser } from '../lib/user'
 
 type CreatePrivateRoomArguments = {
   receiverUserId: UserId
@@ -15,14 +16,14 @@ type CreateGroupRoomArguments = {
 
 export const createPrivateRoom = functions.https.onCall(async (roomData: CreatePrivateRoomArguments, context): Promise<PrivateRoom> => {
   if (!context.auth) {
-    throw 'user must be logged in'
+    throw new HttpsError('unauthenticated', 'user must be logged in')
   }
 
   const senderUserId = context.auth!.uid as UserId
   const receiverUserId = roomData.receiverUserId
 
   if (senderUserId === receiverUserId) {
-    throw 'sender and receiver are same'
+    throw new HttpsError('invalid-argument', 'sender and receiver are same')
   }
 
   const privateRoomData = await getPrivateRoomData(senderUserId, receiverUserId)
@@ -33,12 +34,16 @@ export const createPrivateRoom = functions.https.onCall(async (roomData: CreateP
   else {
     const isSenderExists = await isExistsUser(senderUserId)
     if (!isSenderExists) {
-      throw `sender(${senderUserId} is not exists)`
+      throw new HttpsError('not-found', `sender(${senderUserId}) is not exists`, {
+        userId: senderUserId
+      })
     }
 
     const isReceiverExists = await isExistsUser(receiverUserId)
     if (!isReceiverExists) {
-      throw `receiver(${receiverUserId} is not exists)`
+      throw new HttpsError('not-found', `receiver(${receiverUserId} is not exists)`, {
+        userId: receiverUserId
+      })
     }
 
     const newPrivateRoomId = roomIdGenerator()
@@ -56,39 +61,39 @@ export const createPrivateRoom = functions.https.onCall(async (roomData: CreateP
     }
 
     await createRoomDocument(newPrivateRoomId, newPrivateRoom)
-
     const createdRoomDoc = await getRoomDocument(newPrivateRoomId)
 
-    if (createdRoomDoc.exists) {
-      return createdRoomDoc.data() as PrivateRoom
-    }
-    else {
-      throw `Failed to get private room(${newPrivateRoomId}) after creating the room`
-    }
+    return createdRoomDoc.data() as PrivateRoom
   }
 })
 
 export const createGroupRoom = functions.https.onCall(async (roomData: CreateGroupRoomArguments, context): Promise<GroupRoom> => {
   if (!context.auth) {
-    throw 'user must be logged in'
+    throw new HttpsError('unauthenticated', 'user must be logged in')
   }
 
   const senderUserId: UserId = context.auth!.uid as UserId
   const { receiverUserIds } = roomData
 
   if (receiverUserIds.findIndex(userId => userId === senderUserId) !== -1) {
-    throw `sender${senderUserId} can\'t be assigend to receivers`
+    throw new HttpsError('invalid-argument', `sender${senderUserId} can\'t be assigend to receivers`, {
+      userId: senderUserId
+    })
   }
 
   const isSenderExists = await isExistsUser(senderUserId)
   if (!isSenderExists) {
-    throw `sender(${senderUserId} is already exists)`
+    throw new HttpsError('not-found', `sender(${senderUserId}) is not exists`, {
+      userId: senderUserId
+    })
   }
 
   receiverUserIds.forEach(async receiverUserId => {
     const isReceiverExists = await isExistsUser(receiverUserId)
     if (!isReceiverExists) {
-      throw `receiver(${receiverUserId} is already exists)`
+      throw new HttpsError('not-found', `receiver(${receiverUserId} is not exists)`, {
+        userId: receiverUserId
+      })
     }
   })
 
@@ -110,10 +115,5 @@ export const createGroupRoom = functions.https.onCall(async (roomData: CreateGro
 
   const createdRoomDoc = await getRoomDocument(newRoomId)
 
-  if (createdRoomDoc.exists) {
-    return createdRoomDoc.data() as GroupRoom
-  }
-  else {
-    throw `Failed to get a room(${newRoomId}) after creating the room`
-  }
+  return createdRoomDoc.data() as GroupRoom
 })

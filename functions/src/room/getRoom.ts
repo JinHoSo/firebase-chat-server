@@ -1,12 +1,13 @@
-import * as functions from 'firebase-functions';
+import * as functions from 'firebase-functions'
+import { HttpsError } from 'firebase-functions/lib/providers/https'
 
-import { Room, RoomId, Timestamp, UserId } from '..';
+import { Room, RoomId, Timestamp, UserId } from '..'
 import {
   getRoomDocument,
   getRoomDocumentsAfterRoomIdAndOrderByUpdatedAt,
   getRoomDocumentsAfterUpdatedAt,
   getRoomDocumentsOrderByUpdatedAt,
-} from '../lib/room';
+} from '../lib/room'
 
 const ROOM_PAGE_LIMIT = 15
 
@@ -28,23 +29,18 @@ interface GetRoomsAfterUpdatedAtArguments extends GetRoomsArguments {
 
 export const getRoom = functions.https.onCall(async (roomData: GetRoomArguments, context): Promise<Room> => {
   if (!context.auth) {
-    throw 'user must be logged in'
+    throw new HttpsError('unauthenticated', 'user must be logged in')
   }
 
   const { roomId } = roomData
   const roomDoc = await getRoomDocument(roomId)
 
-  if (roomDoc.exists) {
-    return roomDoc.data() as Room
-  }
-  else {
-    throw `the room(${roomId}) is not exists`
-  }
+  return roomDoc.data() as Room
 })
 
 export const getRooms = functions.https.onCall(async (roomData: GetRoomsArguments, context): Promise<Room[]> => {
   if (!context.auth) {
-    throw 'user must be logged in'
+    throw new HttpsError('unauthenticated', 'user must be logged in')
   }
 
   const pageLimit = roomData.pageLimit || ROOM_PAGE_LIMIT
@@ -61,7 +57,7 @@ export const getRooms = functions.https.onCall(async (roomData: GetRoomsArgument
 
 export const getRoomsAfterRoomId = functions.https.onCall(async (roomData: GetRoomsAfterRoomIdArguments, context): Promise<Room[]> => {
   if (!context.auth) {
-    throw 'user must be logged in'
+    throw new HttpsError('unauthenticated', 'user must be logged in')
   }
 
   const pageLimit = roomData.pageLimit || ROOM_PAGE_LIMIT
@@ -80,7 +76,7 @@ export const getRoomsAfterRoomId = functions.https.onCall(async (roomData: GetRo
 
 export const getRoomsAfterUpdatedAt = functions.https.onCall(async (roomData: GetRoomsAfterUpdatedAtArguments, context): Promise<Room[]> => {
   if (!context.auth) {
-    throw 'user must be logged in'
+    throw new HttpsError('unauthenticated', 'user must be logged in')
   }
 
   const pageLimit = roomData.pageLimit || ROOM_PAGE_LIMIT

@@ -1,8 +1,9 @@
-import * as admin from 'firebase-admin';
-import * as functions from 'firebase-functions';
+import * as admin from 'firebase-admin'
+import * as functions from 'firebase-functions'
+import { HttpsError } from 'firebase-functions/lib/providers/https'
 
-import { Room, RoomId, UserId } from '..';
-import { getRoomDocument, updateRoomDocument } from '../lib/room';
+import { Room, RoomId, UserId } from '..'
+import { updateRoomDocument } from '../lib/room'
 
 type LeaveGroupRoomArguments = {
   roomId: RoomId
@@ -10,17 +11,11 @@ type LeaveGroupRoomArguments = {
 
 export const leaveGroupRoom = functions.https.onCall(async (data: LeaveGroupRoomArguments, context): Promise<true> => {
   if (!context.auth) {
-    throw 'user must be logged in'
+    throw new HttpsError('unauthenticated', 'user must be logged in')
   }
 
   const myUserId = context.auth!.uid as UserId
   const { roomId } = data
-
-  const roomDoc = await getRoomDocument(roomId)
-
-  if (!roomDoc.exists) {
-    throw `room(${roomId}) is not exists`
-  }
 
   const updatedRoom: Pick<Room, 'userIdArray' | 'unreadMessageCount'> = {
     unreadMessageCount: {

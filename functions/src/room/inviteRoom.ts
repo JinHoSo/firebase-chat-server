@@ -1,9 +1,10 @@
-import * as functions from 'firebase-functions';
-import * as admin from 'firebase-admin';
+import * as admin from 'firebase-admin'
+import * as functions from 'firebase-functions'
+import { HttpsError } from 'firebase-functions/lib/providers/https'
 
-import { GroupRoom, Room, RoomId, UserId } from '..';
-import { getRoomDocument, updateRoomDocument } from '../lib/room';
-import { isExistsUser } from '../lib/user';
+import { GroupRoom, Room, RoomId, UserId } from '..'
+import { getRoomDocument, updateRoomDocument } from '../lib/room'
+import { isExistsUser } from '../lib/user'
 
 type InviteRoomArguments = {
   receiverUserId: UserId
@@ -12,7 +13,7 @@ type InviteRoomArguments = {
 
 export const inviteGroupRoom = functions.https.onCall(async (roomData: InviteRoomArguments, context): Promise<GroupRoom> => {
   if (!context.auth) {
-    throw 'user must be logged in'
+    throw new HttpsError('unauthenticated', 'user must be logged in')
   }
 
   const senderUserId = context.auth!.uid as UserId
@@ -20,23 +21,21 @@ export const inviteGroupRoom = functions.https.onCall(async (roomData: InviteRoo
   const { roomId } = roomData
 
   if (senderUserId === receiverUserId) {
-    throw 'sender and receiver are same'
+    throw new HttpsError('invalid-argument', 'sender and receiver are same')
   }
 
   const isSenderExists = isExistsUser(senderUserId)
   if (!isSenderExists) {
-    throw `sender(${senderUserId}) is not exists`
+    throw new HttpsError('not-found', `sender(${senderUserId}) is not exists`, {
+      userId: senderUserId
+    })
   }
 
   const isReceiverExists = isExistsUser(receiverUserId)
   if (!isReceiverExists) {
-    throw `receiver(${receiverUserId}) is not exists`
-  }
-
-  const roomDoc = await getRoomDocument(roomId)
-
-  if (!roomDoc.exists) {
-    throw `room(${roomId}) is not exists`
+    throw new HttpsError('not-found', `receiver(${receiverUserId}) is not exists`, {
+      userId: receiverUserId
+    })
   }
 
   const updatedRoomData: Pick<Room, 'userIdArray' | 'unreadMessageCount'> = {
@@ -50,10 +49,5 @@ export const inviteGroupRoom = functions.https.onCall(async (roomData: InviteRoo
 
   const updatedRoomDoc = await getRoomDocument(roomId)
 
-  if (updatedRoomDoc.exists) {
-    return updatedRoomDoc.data() as GroupRoom
-  }
-  else {
-    throw `failed to get updated room(${roomId}) after updating the room`
-  }
+  return updatedRoomDoc.data() as GroupRoom
 })
