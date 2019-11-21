@@ -1,5 +1,3 @@
-firebase-chat-server is the core of the open source live chat platform using [cloud functions](https://cloud.google.com/functions).
-
 # Introduction
 
 The functions in firebase-chat-server are the backend module required for the operation of chat platform. 
