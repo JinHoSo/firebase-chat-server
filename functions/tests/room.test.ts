@@ -2,9 +2,10 @@ import 'jasmine'
 
 import { expect } from 'chai'
 
-import { createPrivateRoom, GroupRoom, joinRoom, registerUser, Room, UserId } from '../src'
+import { createPrivateRoom, GroupRoom, joinRoom, registerUser, Room, SystemMessage, UserId } from '../src'
 import { cleanRoomDocument } from '../src/lib/room'
 import { cleanUserDocument } from '../src/lib/user'
+import { getMessages, GetMessagesData, GetMessagesResult } from '../src/message/getMessage'
 import {
   createGroupRoom,
   CreateGroupRoomData,
@@ -18,16 +19,16 @@ import {
   getRoomsAfterRoomId,
   GetRoomsAfterRoomIdData,
   getRoomsAfterUpdatedAt,
+  GetRoomsAfterUpdatedAtData,
   GetRoomsData,
   GetRoomsResult,
 } from '../src/room/getRoom'
 import { inviteGroupRoom, InviteGroupRoomData, InviteGroupRoomResult } from '../src/room/inviteRoom'
-import { leaveGroupRoom, LeaveGroupRoomData, LeaveGroupRoomResult } from '../src/room/leaveRoom';
+import { JoinRoomData, JoinRoomResult } from '../src/room/joinRoom'
+import { leaveGroupRoom, LeaveGroupRoomData, LeaveGroupRoomResult } from '../src/room/leaveRoom'
 import { getRoomUsers, GetRoomUsersData, GetRoomUsersResult } from '../src/room/roomUser'
 import { RegisterUserData, RegisterUserResult } from '../src/user/registerUser'
 import { testWrap } from './lib/functionTest'
-import { GetRoomsAfterUpdatedAtData } from '../src/room/getRoom';
-import { JoinRoomData, JoinRoomResult } from '../src/room/joinRoom';
 
 describe('Test for room', () => {
   const smithAuthUid = 'smith'
@@ -133,6 +134,17 @@ describe('Test for room', () => {
       }
     })
 
+    const messages = await testWrap<GetMessagesData, GetMessagesResult>(getMessages, {
+      roomId: groupRoom.roomId
+    }, {
+      auth: {
+        uid: smithAuthUid
+      }
+    })
+
+    const latestMessage = messages[0] as SystemMessage
+
+    expect(latestMessage).to.not.be.null
     expect((invitedGroupRoom.userIdArray as UserId[]).length).to.greaterThan((groupRoom.userIdArray as UserId[]).length)
   })
 
@@ -156,6 +168,17 @@ describe('Test for room', () => {
       }
     })
 
+    const messages = await testWrap<GetMessagesData, GetMessagesResult>(getMessages, {
+      roomId: groupRoom.roomId
+    }, {
+      auth: {
+        uid: smithAuthUid
+      }
+    })
+
+    const latestMessage = messages[0] as SystemMessage
+
+    expect(latestMessage.notice).to.not.be.null
     expect(deleteGroupRoomResult).to.be.true
   })
 
@@ -227,7 +250,7 @@ describe('Test for room', () => {
 
     const lastRoom = rooms[rooms.length - 1] as Room
 
-    const afterRooms = await testWrap<GetRoomsAfterUpdatedAtData, GetRoomsResult>(getRoomsAfterUpdatedAt,{
+    const afterRooms = await testWrap<GetRoomsAfterUpdatedAtData, GetRoomsResult>(getRoomsAfterUpdatedAt, {
       pageLimit: 15,
       afterUpdatedAt: lastRoom.updatedAt
     }, {
@@ -272,7 +295,7 @@ describe('Test for room', () => {
 
     const lastRoom = rooms[rooms.length - 1] as Room
 
-    const leftRoomResult = await testWrap<LeaveGroupRoomData, LeaveGroupRoomResult>(leaveGroupRoom,{
+    const leftRoomResult = await testWrap<LeaveGroupRoomData, LeaveGroupRoomResult>(leaveGroupRoom, {
       roomId: lastRoom.roomId
     }, {
       auth: {

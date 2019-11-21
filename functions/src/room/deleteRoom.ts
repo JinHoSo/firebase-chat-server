@@ -2,8 +2,11 @@ import * as admin from 'firebase-admin'
 import * as functions from 'firebase-functions'
 import { HttpsError } from 'firebase-functions/lib/providers/https'
 
-import { Room, UserId } from '..'
+import { NoticeMessageType, Room, User, UserId } from '..'
+import { messageIdGenerator } from '../lib/generator/idGenerator'
+import { createSystemMessageDocument, CreateSystemMessageDocumentData } from '../lib/message'
 import { updateRoomDocument } from '../lib/room'
+import { getUserDocument } from '../lib/user'
 
 export type DeleteGroupRoomData = Pick<Room, 'roomId'>
 
@@ -25,6 +28,23 @@ export const deleteGroupRoom = functions.https.onCall(async (roomData: DeleteGro
   }
 
   await updateRoomDocument(roomId, updatedRoom)
+
+  const user = await getUserDocument(myUserId)
+  const userNickname = (user.data() as User).nickname
+  
+  //send system message this room
+  const messageId = messageIdGenerator()
+
+  const systemMessage: CreateSystemMessageDocumentData = {
+    notice: {
+      type: NoticeMessageType.LEFT_MEMBER,
+      values: {
+        userNickname
+      }
+    }
+  }
+
+  await createSystemMessageDocument(roomId, messageId, systemMessage)
 
   return true
 })

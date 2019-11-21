@@ -1,33 +1,79 @@
 import { DocumentSnapshot, QuerySnapshot, WriteResult } from '@google-cloud/firestore'
 import { HttpsError } from 'firebase-functions/lib/providers/https'
 
-import { Message, MessageId, RoomId, Timestamp } from '..'
+import { GroupMessage, Message, MessageId, PrivateMessage, RoomId, SystemMessage, Timestamp } from '..'
 import { getMessageCollection } from './firebase'
-import { dateNowGenerator } from './generator/dateGenerator';
+import { dateNowGenerator } from './generator/dateGenerator'
 
-export type CreateMessageDocumentData = Omit<Message, 'roomId'| 'messageId' | 'createdAt' | 'updatedAt' | 'deletedAt'>
+export type CreatePrivateMessageDocumentData = Omit<PrivateMessage, 'roomId' | 'messageId' | 'createdAt' | 'updatedAt' | 'deletedAt'>
+
+export type CreateGroupMessageDocumentData = Omit<GroupMessage, 'roomId' | 'messageId' | 'createdAt' | 'updatedAt' | 'deletedAt'>
+
+export type CreateSystemMessageDocumentData = Omit<SystemMessage, 'roomId' | 'messageId' | 'createdAt'>
 
 export const isExistsMessage = async (roomId: RoomId, messageId: MessageId): Promise<boolean> => {
   const messageDoc = await getMessageCollection(roomId).doc(messageId).get()
   return messageDoc.exists
 }
 
-export const createMessageDocument = async (roomId:RoomId, messageId:MessageId, messageData: CreateMessageDocumentData): Promise<WriteResult> => {
+export const createPrivateMessageDocument = async (roomId: RoomId, messageId: MessageId, messageData: CreatePrivateMessageDocumentData): Promise<WriteResult> => {
   const messageCreatedAt = dateNowGenerator()
 
-  if(!messageData.media){
+  if (!messageData.media) {
     delete messageData.media
   }
 
-  if(!messageData.text){
+  if (!messageData.text) {
     delete messageData.text
   }
 
-  if(!messageData.receiverUserId){
+  const newMessageData: PrivateMessage = {
+    ...messageData,
+    roomId,
+    messageId,
+    createdAt: messageCreatedAt,
+  }
+
+  return await getMessageCollection(roomId)
+    .doc(messageId)
+    .set(newMessageData)
+}
+
+export const createGroupMessageDocument = async (roomId: RoomId, messageId: MessageId, messageData: CreateGroupMessageDocumentData): Promise<WriteResult> => {
+  const messageCreatedAt = dateNowGenerator()
+
+  if (!messageData.media) {
+    delete messageData.media
+  }
+
+  if (!messageData.text) {
+    delete messageData.text
+  }
+
+  if (!messageData.receiverUserId) {
     delete messageData.receiverUserId
   }
 
+  if (!messageData.replyMessageId) {
+    delete messageData.replyMessageId
+  }
+
   const newMessageData: Message = {
+    ...messageData,
+    roomId,
+    messageId,
+    createdAt: messageCreatedAt,
+  }
+
+  return await getMessageCollection(roomId)
+    .doc(messageId)
+    .set(newMessageData)
+}
+
+export const createSystemMessageDocument = async (roomId: RoomId, messageId: MessageId, messageData: CreateSystemMessageDocumentData): Promise<WriteResult> => {
+  const messageCreatedAt = dateNowGenerator()
+
+  const newMessageData: SystemMessage = {
     ...messageData,
     roomId,
     messageId,
@@ -51,7 +97,7 @@ export const getMessageDocument = async (roomId: RoomId, messageId: MessageId): 
   return messageDoc
 }
 
-export const updateTextMessageDocument = async (roomId: RoomId, messageId: MessageId, text:string): Promise<WriteResult> => {
+export const updateTextMessageDocument = async (roomId: RoomId, messageId: MessageId, text: string): Promise<WriteResult> => {
   if (!(await isExistsMessage(roomId, messageId))) {
     throw new HttpsError('not-found', `message(${messageId}) in the room(${roomId}) is not exists`, {
       messageId,
@@ -60,7 +106,7 @@ export const updateTextMessageDocument = async (roomId: RoomId, messageId: Messa
   }
 
   const messageUpdatedAt = dateNowGenerator()
-  const updatedMessageData: Pick<Message, 'text' | 'updatedAt'> = {
+  const updatedMessageData: Pick<PrivateMessage | GroupMessage, 'text' | 'updatedAt'> = {
     text,
     updatedAt: messageUpdatedAt
   }
@@ -79,7 +125,7 @@ export const deleteMessageDocument = async (roomId: RoomId, messageId: MessageId
   }
 
   const messageDeleteddAt = dateNowGenerator()
-  const deletedMessageData: Pick<Message, 'text' | 'deletedAt'> = {
+  const deletedMessageData: Pick<PrivateMessage | GroupMessage, 'text' | 'deletedAt'> = {
     text: '',
     deletedAt: messageDeleteddAt
   }
@@ -133,4 +179,8 @@ export const getMessageDocumentsBeforeMessageDocumentAndOrderByCreatedAt = async
     .startAfter(afterMessageDocument)
     .limit(limit)
     .get()
+}
+
+export const isSystemMessage = (message: Message): message is SystemMessage => {
+  return (<SystemMessage>message).notice !== undefined
 }
