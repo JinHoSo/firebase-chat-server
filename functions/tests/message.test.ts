@@ -2,7 +2,7 @@ import 'jasmine'
 
 import { expect } from 'chai'
 
-import { createPrivateRoom, GroupRoom, Message, registerUser, Room, sendMessage } from '../src'
+import { createPrivateRoom, Message, registerUser, sendGroupMessage, sendPrivateMessage, UserId, Room } from '../src'
 import { cleanRoomDocument } from '../src/lib/room'
 import { cleanUserDocument } from '../src/lib/user'
 import {
@@ -14,7 +14,12 @@ import {
   GetMessagesData,
   GetMessagesResult,
 } from '../src/message/getMessage'
-import { SendMessageData, SendMessageResult } from '../src/message/sendMessage'
+import {
+  SendGroupMessageData,
+  SendGroupMessageResult,
+  SendPrivateMessageData,
+  SendPrivateMessageResult,
+} from '../src/message/sendMessage'
 import {
   createGroupRoom,
   CreateGroupRoomData,
@@ -104,10 +109,9 @@ describe('Test for message', () => {
     const receiverUserId = markAuthUid
     const text = 'Hello'
 
-    const sentMessage = await testWrap<SendMessageData, SendMessageResult>(sendMessage, {
+    const sentMessage = await testWrap<SendPrivateMessageData, SendPrivateMessageResult>(sendPrivateMessage, {
       requestedId,
       roomId,
-      receiverUserId,
       text
     }, {
       auth: {
@@ -120,9 +124,8 @@ describe('Test for message', () => {
     expect(sentMessage.messageId).to.not.be.undefined
   })
 
-
-  it('should create a group room', async () => {
-    const newGroupRoom = await testWrap<CreateGroupRoomData, CreateGroupRoomResult>(createGroupRoom, {
+  it('should send a message to group room', async () => {
+    const groupRoom = await testWrap<CreateGroupRoomData, CreateGroupRoomResult>(createGroupRoom, {
       receiverUserIds: [markAuthUid, alvinAuthUid]
     }, {
       auth: {
@@ -130,26 +133,11 @@ describe('Test for message', () => {
       }
     })
 
-    expect(newGroupRoom.roomId).to.not.equal(null)
-  })
-
-  it('should send a message to group room', async () => {
-    const rooms = await testWrap<GetRoomsData, GetRoomsResult>(getRooms, {
-      pageLimit: 15
-    }, {
-      auth: {
-        uid: alvinAuthUid
-      }
-    })
-
-    //pick group room
-    const groupRoom = rooms.find(room => (room.userIdArray as string[]).length > 2) as GroupRoom
-
     const requestedId = 'requestId'
     const roomId = groupRoom.roomId
     const text = 'Hello'
 
-    const sentMessage = await testWrap<SendMessageData, SendMessageResult>(sendMessage, {
+    const sentMessage = await testWrap<SendGroupMessageData, SendGroupMessageResult>(sendGroupMessage, {
       requestedId,
       roomId,
       text
@@ -173,15 +161,13 @@ describe('Test for message', () => {
       }
     })
 
-    expect(rooms.length).to.greaterThan(0)
-
-    const room = rooms[0]
+    const room = rooms.find(room => (room.userIdArray as UserId[]).length > 2) as Room
 
     const requestedId = 'requestId'
     const roomId = room.roomId
     const receiverUserId = kelvinAuthUid
 
-    await testWrap<SendMessageData, SendMessageResult>(sendMessage, {
+    await testWrap<SendGroupMessageData, SendGroupMessageResult>(sendGroupMessage, {
       requestedId,
       roomId,
       receiverUserId,
@@ -192,7 +178,7 @@ describe('Test for message', () => {
       }
     })
 
-    await testWrap<SendMessageData, SendMessageResult>(sendMessage, {
+    await testWrap<SendGroupMessageData, SendGroupMessageResult>(sendGroupMessage, {
       requestedId,
       roomId,
       text: 'Hello3'
@@ -222,13 +208,13 @@ describe('Test for message', () => {
       }
     })
 
-    const room = rooms[0]
+    const room = rooms.find(room => (room.userIdArray as UserId[]).length > 2) as Room
     const requestedId = 'requestId'
     const roomId = room.roomId
     const receiverUserId = kelvinAuthUid
     const testText = 'Hi2'
 
-    await testWrap<SendMessageData, SendMessageResult>(sendMessage, {
+    const sentMessage1 = await testWrap<SendGroupMessageData, SendGroupMessageResult>(sendGroupMessage, {
       requestedId,
       roomId,
       receiverUserId,
@@ -239,7 +225,7 @@ describe('Test for message', () => {
       }
     })
 
-    const sentMessage = await testWrap<SendMessageData, SendMessageResult>(sendMessage, {
+    const sentMessage2 = await testWrap<SendGroupMessageData, SendGroupMessageResult>(sendGroupMessage, {
       requestedId,
       roomId,
       text: 'Hi3'
@@ -249,9 +235,9 @@ describe('Test for message', () => {
       }
     })
 
-    const messages: Message[] = await testWrap<GetMessagesBeforeMessageIdData, GetMessagesResult>(getMessagesBeforeMessageId, {
+    const messages = await testWrap<GetMessagesBeforeMessageIdData, GetMessagesResult>(getMessagesBeforeMessageId, {
       roomId: roomId,
-      afterMessageId: sentMessage.messageId,
+      afterMessageId: sentMessage2.messageId,
       pageLimit: 1
     }, {
       auth: {
@@ -259,7 +245,7 @@ describe('Test for message', () => {
       }
     })
 
-    expect(messages[0].text).to.equal(testText)
+    expect(messages[0].messageId).to.equal(sentMessage1.messageId)
   })
 
   it('should get messages by created at', async () => {
@@ -271,13 +257,13 @@ describe('Test for message', () => {
       }
     })
 
-    const room = rooms[0]
+    const room = rooms.find(room => (room.userIdArray as UserId[]).length > 2) as Room
     const requestedId = 'requestId'
     const roomId = room.roomId
     const receiverUserId = kelvinAuthUid
     const testText = 'Hi2'
 
-    await testWrap<SendMessageData, SendMessageResult>(sendMessage, {
+    const sentMessage1 = await testWrap<SendGroupMessageData, SendGroupMessageResult>(sendGroupMessage, {
       requestedId,
       roomId,
       receiverUserId,
@@ -288,7 +274,7 @@ describe('Test for message', () => {
       }
     })
 
-    const sentMessage = await testWrap<SendMessageData, SendMessageResult>(sendMessage, {
+    const sentMessage2 = await testWrap<SendGroupMessageData, SendGroupMessageResult>(sendGroupMessage, {
       requestedId,
       roomId,
       text: 'Hi3'
@@ -298,9 +284,9 @@ describe('Test for message', () => {
       }
     })
 
-    const messages: Message[] = await testWrap<GetMessagesBeforeCreatedAtData, GetMessagesResult>(getMessagesBeforeCreatedAt, {
+    const messages = await testWrap<GetMessagesBeforeCreatedAtData, GetMessagesResult>(getMessagesBeforeCreatedAt, {
       roomId: roomId,
-      afterCreatedAt: sentMessage.createdAt,
+      afterCreatedAt: sentMessage2.createdAt,
       pageLimit: 1
     }, {
       auth: {
@@ -308,7 +294,7 @@ describe('Test for message', () => {
       }
     })
 
-    expect(messages[0].text).to.equal(testText)
+    expect(messages[0].messageId).to.equal(sentMessage1.messageId)
   })
 
   it('should clean up message for test', async () => {

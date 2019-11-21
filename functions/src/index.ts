@@ -21,6 +21,11 @@ export enum MediaType {
   VOICE
 }
 
+export enum NoticeMessageType {
+  JOIN_MEMBER,
+  LEFT_MEMBER
+}
+
 //Type for timestamp
 export type Timestamp = number
 
@@ -95,8 +100,27 @@ export type MessageMedia = {
   uri: Uri
 }
 
+export type MessageNotice = {
+  type: NoticeMessageType
+  values: {
+    [key: string]: string
+  }
+}
+
 //Message type
-export type Message = {
+export type PrivateMessage = {
+  requestedId: MessageId
+  messageId: MessageId
+  roomId: RoomId
+  senderUserId: UserId
+  text?: string
+  media?: MessageMedia
+  createdAt: Timestamp
+  updatedAt?: Timestamp
+  deletedAt?: Timestamp
+}
+
+export type GroupMessage = {
   requestedId: MessageId
   messageId: MessageId
   replyMessageId?: MessageId
@@ -110,6 +134,15 @@ export type Message = {
   deletedAt?: Timestamp
 }
 
+export type SystemMessage = {
+  messageId: MessageId
+  roomId: RoomId
+  notice: MessageNotice
+  createdAt: Timestamp
+}
+
+export type Message = PrivateMessage | GroupMessage | SystemMessage
+
 export { registerUser } from './user/registerUser'
 export { modifyUser } from './user/modifyUser'
 export { leaveUser } from './user/leaveUser'
@@ -120,5 +153,5 @@ export { joinRoom } from './room/joinRoom'
 export { leaveGroupRoom as leaveRoom } from './room/leaveRoom'
 export { inviteGroupRoom } from './room/inviteRoom'
 export { getRoomUsers } from './room/roomUser'
-export { sendMessage } from './message/sendMessage'
+export { sendPrivateMessage, sendGroupMessage } from './message/sendMessage'
 export { deleteMessage } from './message/deleteMessage'

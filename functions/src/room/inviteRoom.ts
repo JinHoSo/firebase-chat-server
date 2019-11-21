@@ -2,10 +2,12 @@ import * as admin from 'firebase-admin'
 import * as functions from 'firebase-functions'
 import { HttpsError } from 'firebase-functions/lib/providers/https'
 
-import { GroupRoom, Room, RoomId, UserId } from '..'
+import { GroupRoom, NoticeMessageType, Room, RoomId, User, UserId } from '..'
 import { dateNowGenerator } from '../lib/generator/dateGenerator'
+import { messageIdGenerator } from '../lib/generator/idGenerator'
+import { createSystemMessageDocument, CreateSystemMessageDocumentData } from '../lib/message'
 import { getRoomDocument, updateRoomDocument } from '../lib/room'
-import { isExistsUser } from '../lib/user'
+import { getUserDocument } from '../lib/user'
 
 export type InviteGroupRoomData = {
   receiverUserId: UserId
@@ -20,26 +22,17 @@ export const inviteGroupRoom = functions.https.onCall(async (roomData: InviteGro
   }
 
   const senderUserId = context.auth!.uid as UserId
-  const { receiverUserId } = roomData
-  const { roomId } = roomData
+  const { roomId, receiverUserId } = roomData
 
   if (senderUserId === receiverUserId) {
     throw new HttpsError('invalid-argument', 'sender and receiver are same')
   }
 
-  const isSenderExists = isExistsUser(senderUserId)
-  if (!isSenderExists) {
-    throw new HttpsError('not-found', `sender(${senderUserId}) is not exists`, {
-      userId: senderUserId
-    })
-  }
+  const senderDoc = await getUserDocument(senderUserId)
+  const senderNickname = (senderDoc.data() as User).nickname
 
-  const isReceiverExists = isExistsUser(receiverUserId)
-  if (!isReceiverExists) {
-    throw new HttpsError('not-found', `receiver(${receiverUserId}) is not exists`, {
-      userId: receiverUserId
-    })
-  }
+  const receiverDoc = await getUserDocument(receiverUserId)
+  const receiverNickname = (receiverDoc.data() as User).nickname
 
   const userLastSeenAt = dateNowGenerator()
 
@@ -51,6 +44,21 @@ export const inviteGroupRoom = functions.https.onCall(async (roomData: InviteGro
   }
 
   await updateRoomDocument(roomId, updatedRoomData)
+
+  //send system message this room
+  const messageId = messageIdGenerator()
+
+  const systemMessage: CreateSystemMessageDocumentData = {
+    notice: {
+      type: NoticeMessageType.JOIN_MEMBER,
+      values: {
+        senderNickname,
+        receiverNickname
+      }
+    }
+  }
+
+  await createSystemMessageDocument(roomId, messageId, systemMessage)
 
   const updatedRoomDoc = await getRoomDocument(roomId)
 

@@ -1,9 +1,9 @@
 import * as functions from 'firebase-functions'
 
-import { Message } from '..'
+import { GroupMessage, PrivateMessage } from '..'
 import { updateTextMessageDocument } from '../lib/message'
 
-export type UpdateMessageData = Pick<Message, 'roomId' | 'messageId' | 'text'>
+export type UpdateMessageData = Pick<PrivateMessage | GroupMessage, 'roomId' | 'messageId' | 'text'>
 export type UpdateMessageResult = true
 
 export const updateTextMessage = functions.https.onCall(async (messageData: UpdateMessageData, context): Promise<UpdateMessageResult> => {
