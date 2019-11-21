@@ -4,9 +4,13 @@ import { HttpsError } from 'firebase-functions/lib/providers/https'
 import { Room, RoomId, RoomUser, User, UserId } from '..'
 import { COLLECTION_GROUP_USER_NAME, firestore, userCollection } from './firebase'
 import { getRoomDocument } from './room'
+import { dateNowGenerator } from './generator/dateGenerator';
+
+export type CreateUserDocumentData = Omit<User, 'userId' | 'registeredAt'>
+export type UpdateUserDocumentData = Partial<Omit<User, 'userId'>>
 
 export const isExistsUser = async (userId: UserId): Promise<boolean> => {
-  const userDoc = await getUserDocument(userId)
+  const userDoc = await userCollection.doc(userId).get()
   const user = userDoc.data() as User
 
   if (!userDoc.exists || (user && user.leftAt)) {
@@ -44,19 +48,19 @@ export const getUserDocuments = async (userIds: UserId[]): Promise<DocumentSnaps
   return users
 }
 
-export const createUserDocument = async (userId: UserId, userData: Omit<User, 'userId' | 'registeredAt'>): Promise<WriteResult> => {
-  const userDoc = await getUserDocument(userId)
-
-  if (userDoc.exists) {
+export const createUserDocument = async (userId: UserId, userData: CreateUserDocumentData): Promise<WriteResult> => {
+  if (await isExistsUser(userId)) {
     throw new HttpsError('already-exists', `userId(${userId}) is already exists`, {
       userId
     })
   }
   else {
+    const userRegisteredAt = dateNowGenerator()
+
     const newUser: User = {
       ...userData,
       userId,
-      registeredAt: Date.now()
+      registeredAt: userRegisteredAt
     }
 
     return await userCollection
@@ -65,16 +69,18 @@ export const createUserDocument = async (userId: UserId, userData: Omit<User, 'u
   }
 }
 
-export const updateUserDocument = async (userId: UserId, userData: Partial<Omit<User, 'userId'>>): Promise<WriteResult> => {
+export const updateUserDocument = async (userId: UserId, userData: UpdateUserDocumentData): Promise<WriteResult> => {
   if (!(await isExistsUser(userId))) {
     throw new HttpsError('not-found', `user(${userId}) is not exists`, {
       userId
     })
   }
 
+  const userUpdatedAt = dateNowGenerator()
+
   const updatedUserData: Partial<User> = {
     ...userData,
-    updatedAt: Date.now()
+    updatedAt: userUpdatedAt
   }
 
   return await userCollection
@@ -89,8 +95,10 @@ export const deleteUserDocument = async (userId: UserId): Promise<WriteResult> =
     })
   }
 
+  const userLeftAt = dateNowGenerator()
+
   const deletedUserData: Pick<User, 'leftAt'> = {
-    leftAt: Date.now()
+    leftAt: userLeftAt
   }
 
   return await userCollection
@@ -99,12 +107,6 @@ export const deleteUserDocument = async (userId: UserId): Promise<WriteResult> =
 }
 
 export const cleanUserDocument = async (userId: UserId): Promise<WriteResult> => {
-  if (!(await isExistsUser(userId))) {
-    throw new HttpsError('not-found', `user(${userId}) is not exists`, {
-      userId
-    })
-  }
-
   return await userCollection
     .doc(userId)
     .delete()

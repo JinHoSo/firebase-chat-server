@@ -1,7 +1,7 @@
 import * as functions from 'firebase-functions'
 import { HttpsError } from 'firebase-functions/lib/providers/https'
 
-import { Room, RoomId, Timestamp, UserId } from '..'
+import { Room, Timestamp, UserId } from '..'
 import {
   getRoomDocument,
   getRoomDocumentsAfterRoomIdAndOrderByUpdatedAt,
@@ -11,23 +11,25 @@ import {
 
 const ROOM_PAGE_LIMIT = 15
 
-type GetRoomArguments = {
-  roomId: RoomId
-}
+export type GetRoomData = Pick<Room, 'roomId'>
 
-type GetRoomsArguments = {
+export type GetRoomResult = Room
+
+export type GetRoomsData = {
   pageLimit?: number
 }
 
-interface GetRoomsAfterRoomIdArguments extends GetRoomsArguments {
+export type GetRoomsResult = Room[]
+
+export interface GetRoomsAfterRoomIdData extends GetRoomsData {
   afterRoomId: string
 }
 
-interface GetRoomsAfterUpdatedAtArguments extends GetRoomsArguments {
-  updatedAt: Timestamp
+export interface GetRoomsAfterUpdatedAtData extends GetRoomsData {
+  afterUpdatedAt: Timestamp
 }
 
-export const getRoom = functions.https.onCall(async (roomData: GetRoomArguments, context): Promise<Room> => {
+export const getRoom = functions.https.onCall(async (roomData: GetRoomData, context): Promise<GetRoomResult> => {
   if (!context.auth) {
     throw new HttpsError('unauthenticated', 'user must be logged in')
   }
@@ -38,7 +40,7 @@ export const getRoom = functions.https.onCall(async (roomData: GetRoomArguments,
   return roomDoc.data() as Room
 })
 
-export const getRooms = functions.https.onCall(async (roomData: GetRoomsArguments, context): Promise<Room[]> => {
+export const getRooms = functions.https.onCall(async (roomData: GetRoomsData, context): Promise<GetRoomsResult> => {
   if (!context.auth) {
     throw new HttpsError('unauthenticated', 'user must be logged in')
   }
@@ -55,7 +57,7 @@ export const getRooms = functions.https.onCall(async (roomData: GetRoomsArgument
   }
 })
 
-export const getRoomsAfterRoomId = functions.https.onCall(async (roomData: GetRoomsAfterRoomIdArguments, context): Promise<Room[]> => {
+export const getRoomsAfterRoomId = functions.https.onCall(async (roomData: GetRoomsAfterRoomIdData, context): Promise<GetRoomsResult> => {
   if (!context.auth) {
     throw new HttpsError('unauthenticated', 'user must be logged in')
   }
@@ -74,16 +76,16 @@ export const getRoomsAfterRoomId = functions.https.onCall(async (roomData: GetRo
   }
 })
 
-export const getRoomsAfterUpdatedAt = functions.https.onCall(async (roomData: GetRoomsAfterUpdatedAtArguments, context): Promise<Room[]> => {
+export const getRoomsAfterUpdatedAt = functions.https.onCall(async (roomData: GetRoomsAfterUpdatedAtData, context): Promise<GetRoomsResult> => {
   if (!context.auth) {
     throw new HttpsError('unauthenticated', 'user must be logged in')
   }
 
   const pageLimit = roomData.pageLimit || ROOM_PAGE_LIMIT
   const myUserId = context.auth!.uid as UserId
-  const { updatedAt } = roomData
+  const { afterUpdatedAt } = roomData
 
-  const roomDocs = await getRoomDocumentsAfterUpdatedAt(myUserId, updatedAt, pageLimit)
+  const roomDocs = await getRoomDocumentsAfterUpdatedAt(myUserId, afterUpdatedAt, pageLimit)
 
   if (roomDocs.size > 0) {
     return roomDocs.docs.map((roomDoc) => roomDoc.data()) as Room[]

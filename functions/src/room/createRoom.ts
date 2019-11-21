@@ -2,19 +2,24 @@ import * as functions from 'firebase-functions'
 import { HttpsError } from 'firebase-functions/lib/providers/https'
 
 import { GroupRoom, PrivateRoom, UserId } from '..'
+import { dateNowGenerator } from '../lib/generator/dateGenerator'
 import { roomIdGenerator } from '../lib/generator/idGenerator'
 import { createRoomDocument, getPrivateRoomData, getRoomDocument } from '../lib/room'
 import { isExistsUser } from '../lib/user'
 
-type CreatePrivateRoomArguments = {
+export type CreatePrivateRoomData = {
   receiverUserId: UserId
 }
 
-type CreateGroupRoomArguments = {
+export type CreatePrivateRoomResult = PrivateRoom
+
+export type CreateGroupRoomData = {
   receiverUserIds: UserId[]
 }
 
-export const createPrivateRoom = functions.https.onCall(async (roomData: CreatePrivateRoomArguments, context): Promise<PrivateRoom> => {
+export type CreateGroupRoomResult = GroupRoom
+
+export const createPrivateRoom = functions.https.onCall(async (roomData: CreatePrivateRoomData, context): Promise<CreatePrivateRoomResult> => {
   if (!context.auth) {
     throw new HttpsError('unauthenticated', 'user must be logged in')
   }
@@ -47,27 +52,28 @@ export const createPrivateRoom = functions.https.onCall(async (roomData: CreateP
     }
 
     const newPrivateRoomId = roomIdGenerator()
+    const userLastSeenAt = dateNowGenerator()
 
-    const newPrivateRoom: Pick<PrivateRoom, 'userIdMap' | 'userIdArray' | 'unreadMessageCount'> = {
+    const newPrivateRoom: Pick<PrivateRoom, 'userIdMap' | 'userIdArray' | 'usersLastSeenAt'> = {
       userIdMap: {
         [senderUserId]: true,
         [receiverUserId]: true,
       },
       userIdArray: [senderUserId, receiverUserId],
-      unreadMessageCount: {
-        [senderUserId]: 0,
-        [receiverUserId]: 0,
+      usersLastSeenAt: {
+        [senderUserId]: userLastSeenAt,
+        [receiverUserId]: userLastSeenAt,
       },
     }
 
     await createRoomDocument(newPrivateRoomId, newPrivateRoom)
     const createdRoomDoc = await getRoomDocument(newPrivateRoomId)
 
-    return createdRoomDoc.data() as PrivateRoom
+    return createdRoomDoc.data() as CreatePrivateRoomResult
   }
 })
 
-export const createGroupRoom = functions.https.onCall(async (roomData: CreateGroupRoomArguments, context): Promise<GroupRoom> => {
+export const createGroupRoom = functions.https.onCall(async (roomData: CreateGroupRoomData, context): Promise<CreateGroupRoomResult> => {
   if (!context.auth) {
     throw new HttpsError('unauthenticated', 'user must be logged in')
   }
@@ -99,21 +105,22 @@ export const createGroupRoom = functions.https.onCall(async (roomData: CreateGro
 
   const newRoomId = roomIdGenerator()
 
-  const unreadMessageCount = receiverUserIds.reduce((accumulator, receiverUserId) => {
-    accumulator[receiverUserId] = 0
+  const userLastSeenAt = dateNowGenerator()
+  const usersLastSeenAt = receiverUserIds.reduce((accumulator, receiverUserId) => {
+    accumulator[receiverUserId] = userLastSeenAt
     return accumulator
-  }, { [senderUserId]: 0 })
+  }, { [senderUserId]: userLastSeenAt })
 
   const userIdArray = [senderUserId, ...receiverUserIds]
 
-  const newRoom: Pick<GroupRoom, 'userIdArray' | 'unreadMessageCount'> = {
+  const newRoom: Pick<GroupRoom, 'userIdArray' | 'usersLastSeenAt'> = {
     userIdArray: userIdArray,
-    unreadMessageCount: unreadMessageCount,
+    usersLastSeenAt: usersLastSeenAt,
   }
 
   await createRoomDocument(newRoomId, newRoom)
 
   const createdRoomDoc = await getRoomDocument(newRoomId)
 
-  return createdRoomDoc.data() as GroupRoom
+  return createdRoomDoc.data() as CreateGroupRoomResult
 })

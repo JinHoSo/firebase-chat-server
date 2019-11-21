@@ -1,133 +1,108 @@
 import 'jasmine'
 
 import { expect } from 'chai'
-import * as functionTest from 'firebase-functions-test'
 
-import { getMyProfile, getUserProfile, leaveUser, modifyUser, registerUser, MediaType } from '../src'
-import { cleanUserDocument, getUserDocument } from '../src/lib/user'
-import {i18n} from '../src/i18n/i18n'
-import {messageMediaToTextGenerator} from '../src/lib/generator/textGenerator'
+import { getMyProfile, getUserProfile, leaveUser, modifyUser, registerUser } from '../src'
+import { cleanUserDocument } from '../src/lib/user'
+import { GetUserProfileData, GetUserResult } from '../src/user/getUser'
+import { LeaveUserResult } from '../src/user/leaveUser'
+import { ModifyUserData, ModifyUserResult } from '../src/user/modifyUser'
+import { RegisterUserData, RegisterUserResult } from '../src/user/registerUser'
+import { testWrap } from './lib/functionTest'
 
-const test = functionTest({
-  databaseURL: 'https://younext-c23b6.firebaseio.com',
-  storageBucket: 'younext-c23b6.appspot.com',
-  projectId: 'younext-c23b6',
-}, './younext-firebase-adminsdk.json')
+describe('Test for user', () => {
+  const smithAuthUid = 'smithAuthUid'
+  const markAuthUid = 'markAuthUid'
 
-describe('cloud functions for user', () => {
-  const authUid = 'myUid'
-  const friendAuthUid = 'friendUid'
-
-  it('should register my user', async () => {
-    const wrapped = test.wrap(registerUser)
-    const newUser = await wrapped({
+  it('should register an user Smith', async () => {
+    const smith = await testWrap<RegisterUserData, RegisterUserResult>(registerUser, {
       nickname: 'Smith',
       phoneNumber: '821076546510',
-      locale:'ko-KR'
+      locale: 'ko-KR'
     }, {
       auth: {
-        uid: authUid
+        uid: smithAuthUid
       },
     })
 
-    console.log('newUser', newUser)
-
-    expect(newUser).to.not.equal(null)
+    expect(smith.userId).to.not.equal(null)
   })
 
-  it('should register friend user', async () => {
-    const wrapped = test.wrap(registerUser)
-    const newUser = await wrapped({
-      nickname: 'Mark',
+  it('should register an user Mark', async () => {
+    const mark = await testWrap<RegisterUserData, RegisterUserResult>(registerUser, {
+      nickname: 'mark',
       phoneNumber: '821076546511',
-      locale:'en-US'
+      locale: 'en-US'
     }, {
       auth: {
-        uid: friendAuthUid
+        uid: markAuthUid
       },
     })
 
-    console.log('newUser', newUser)
-
-    expect(newUser).to.not.equal(null)
+    expect(mark.userId).to.not.equal(null)
   })
 
-  it('should get my profile', async () => {
-    const wrapped = test.wrap(getMyProfile)
-    const myProfile = await wrapped({
-    }, {
+  it('should get my profile who is Smith', async () => {
+    const smith = await testWrap<{}, GetUserResult>(getMyProfile, {}, {
       auth: {
-        uid: authUid
+        uid: smithAuthUid
       },
     })
 
-    console.log('myProfile', myProfile)
-
-    expect(myProfile.userId).to.equal(authUid)
+    expect(smith.userId).to.equal(smithAuthUid)
   })
 
-  it('should get user profile', async () => {
-    const wrapped = test.wrap(getUserProfile)
-    const friendProfile = await wrapped({
-      userId: friendAuthUid
+  it('should get an user profile who is Mark', async () => {
+    const mark = await testWrap<GetUserProfileData, GetUserResult>(getUserProfile, {
+      userId: markAuthUid
     }, {
       auth: {
-        uid: authUid
+        uid: smithAuthUid
       },
     })
 
-    console.log('friendProfile', friendProfile)
-
-    expect(friendProfile.userId).to.equal(friendAuthUid)
+    expect(mark.userId).to.equal(markAuthUid)
   })
 
-  it('should modify a user', async () => {
+  it('should modify an user', async () => {
     const newNickname = 'Gipson'
-    const wrapped = test.wrap(modifyUser)
-    const modifiedUser = await wrapped({
+    const modifiedUser = await testWrap<ModifyUserData, ModifyUserResult>(modifyUser, {
       nickname: newNickname,
     }, {
       auth: {
-        uid: authUid
+        uid: smithAuthUid
       },
     })
-
-    console.log('modifiedUser', modifiedUser)
 
     expect(modifiedUser.nickname).to.equal(newNickname)
   })
 
-  it('should leave a user', async () => {
-    const wrapped = test.wrap(leaveUser)
-    await wrapped({}, {
+  it('should leave an user', async () => {
+    const leftUserResult = await testWrap<{}, LeaveUserResult>(leaveUser, {}, {
       auth: {
-        uid: authUid
+        uid: smithAuthUid
       },
     })
 
-    const getUserProfileWrapped = test.wrap(getUserProfile)
-    try{
-      await getUserProfileWrapped({
-        userId: authUid
-      }, {
+    expect(leftUserResult).to.be.true
+
+    try {
+      const smith = await testWrap<{}, GetUserResult>(getMyProfile, {}, {
         auth: {
-          uid: authUid
+          uid: smithAuthUid
         },
       })
     }
-    catch(e){
+    catch (e) {
+      // console.log(e)
       expect(e).to.be.Throw
     }
   })
 
   it('should clean up users for test', async () => {
-    await cleanUserDocument(authUid)
-    await cleanUserDocument(friendAuthUid)
+    await cleanUserDocument(smithAuthUid)
+    await cleanUserDocument(markAuthUid)
 
-    const user1 = await getUserDocument(authUid)
-    const user2 = await getUserDocument(authUid)
-
-    expect(user1.exists).to.equal(false)
-    expect(user2.exists).to.equal(false)
+    console.log('clean all tests.')
   })
 })

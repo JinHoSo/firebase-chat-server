@@ -1,7 +1,9 @@
+import * as shortUUID from 'short-uuid'
+
 export const roomIdGenerator = (): string => {
-  return Date.now().toString()
+  return shortUUID.generate()
 }
 
 export const messageIdGenerator = (): string => {
-  return Date.now().toString()
+  return shortUUID.generate()
 }

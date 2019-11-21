@@ -4,7 +4,9 @@ import { HttpsError } from 'firebase-functions/lib/providers/https'
 import { UserId } from '..'
 import { deleteUserDocument } from '../lib/user'
 
-export const leaveUser = functions.https.onCall(async (userData, context): Promise<true> => {
+export type LeaveUserResult = true
+
+export const leaveUser = functions.https.onCall(async (userData, context): Promise<LeaveUserResult> => {
   if (!context.auth) {
     throw new HttpsError('unauthenticated', 'user must be logged in')
   }

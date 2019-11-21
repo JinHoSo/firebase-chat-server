@@ -1,22 +1,28 @@
-import { FieldValue } from '@google-cloud/firestore'
 import * as functions from 'firebase-functions'
 import { HttpsError } from 'firebase-functions/lib/providers/https'
 
-import { Message, OnlineState, User, UserOnlineStatus } from '..'
-import { database, getMessageCollection, messaging, roomCollection } from '../lib/firebase'
+import { Message, OnlineState, User, UserId, UserOnlineStatus } from '..'
+import { database, messaging, roomCollection } from '../lib/firebase'
+import { dateNowGenerator } from '../lib/generator/dateGenerator'
 import { messageIdGenerator } from '../lib/generator/idGenerator'
 import { messageMediaToTextGenerator } from '../lib/generator/textGenerator'
+import { createMessageDocument, CreateMessageDocumentData } from '../lib/message'
 import { getUserDocument } from '../lib/user'
 
-type SendMessageArguments = Omit<Message, 'messageId' | 'createdAt' | 'deletedAt'>
+export type SendMessageData = Omit<Message, 'senderUserId' | 'messageId' | 'createdAt' | 'deletedAt'>
 
-type SendMessageResponse = Promise<Pick<Message, 'roomId' | 'requestedId' | 'messageId'>>
+export type SendMessageResult = Pick<Message, 'roomId' | 'requestedId' | 'messageId' | 'createdAt'>
 
-export const sendMessage = functions.https.onCall(async (messageData: SendMessageArguments, context): SendMessageResponse => {
+export const sendMessage = functions.https.onCall(async (messageData: SendMessageData, context): Promise<SendMessageResult> => {
+  if (!context.auth) {
+    throw new HttpsError('unauthenticated', 'user must be logged in')
+  }
+
+  const senderUserId: UserId = context.auth!.uid as UserId
+
   const {
     requestedId,
     roomId,
-    senderUserId,
     receiverUserId,
     text,
     media
@@ -30,35 +36,38 @@ export const sendMessage = functions.https.onCall(async (messageData: SendMessag
   const senderDoc = await getUserDocument(senderUserId)
   const sender = senderDoc.data() as User
 
-  const receiverDoc = await getUserDocument(receiverUserId)
-  const receiver = receiverDoc.data() as User
-
-  const messageCreatedAt = Date.now()
+  const messageCreatedAt = dateNowGenerator()
   const messageId = messageIdGenerator()
-  const messageCollection = getMessageCollection(roomId)
 
-  const newMessage: Message = {
+  const newMessage: CreateMessageDocumentData = {
     requestedId,
-    messageId,
-    roomId,
     senderUserId,
     receiverUserId,
-    text: text ? text : undefined,
-    media: media ? media : undefined,
-    createdAt: messageCreatedAt,
+    text,
+    media
   }
 
-  await messageCollection.doc(messageId).set(newMessage)
+  await createMessageDocument(roomId, messageId, newMessage)
 
-  const receiverStatusStore = database.ref('/status/' + receiverUserId)
-  const receiverStatusSnapshot = await receiverStatusStore.once('value')
-  const receiverStatue = receiverStatusSnapshot.val() as UserOnlineStatus
-  const isReceiverOnline = receiverStatue && receiverStatue.state === OnlineState.ONLINE ? true : false
-  const isJoinedConversationNow = receiverStatue && receiverStatue.joinedRoomId ? receiverStatue.joinedRoomId === roomId : false
+  await roomCollection.doc(roomId).set({
+    lastMessage: newMessage,
+    updatedAt: messageCreatedAt,
+  }, {
+    merge: true
+  })
 
-  //send push notification
-  if (receiver.pushToken) {
-    if (isReceiverOnline) {
+  if (receiverUserId) {
+    const receiverDoc = await getUserDocument(receiverUserId)
+    const receiver = receiverDoc.data() as User
+
+    const receiverStatusStore = database.ref('/status/' + receiverUserId)
+    const receiverStatusSnapshot = await receiverStatusStore.once('value')
+    const receiverStatue = receiverStatusSnapshot.val() as UserOnlineStatus
+    const isReceiverOnline = receiverStatue && receiverStatue.state === OnlineState.ONLINE ? true : false
+    // const isJoinedConversationNow = receiverStatue && receiverStatue.joinedRoomId ? receiverStatue.joinedRoomId === roomId : false
+
+    //send push notification
+    if (receiver.pushToken && !isReceiverOnline) {
       const payload = {
         notification: {
           title: sender.nickname,
@@ -77,19 +86,10 @@ export const sendMessage = functions.https.onCall(async (messageData: SendMessag
     }
   }
 
-  await roomCollection.doc(roomId).set({
-    lastMessage: newMessage,
-    updatedAt: messageCreatedAt,
-    unreadMessageCount: {
-      [receiverUserId]: isJoinedConversationNow ? 0 : FieldValue.increment(1),
-    },
-  }, {
-    merge: true
-  })
-
   return {
     roomId,
     requestedId,
-    messageId
+    messageId,
+    createdAt: messageCreatedAt
   }
 })

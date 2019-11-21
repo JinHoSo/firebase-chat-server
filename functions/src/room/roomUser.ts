@@ -1,13 +1,13 @@
 import * as functions from 'firebase-functions'
 
-import { RoomId, RoomUser } from '..'
+import { Room, RoomUser } from '..'
 import { getUsersInRoom } from '../lib/user'
 
-type GetRoomUserAruments = {
-  roomId: RoomId
-}
+export type GetRoomUsersData = Pick<Room, 'roomId'>
 
-export const getRoomUsers = functions.https.onCall(async (roomData: GetRoomUserAruments, context): Promise<RoomUser[]> => {
+export type GetRoomUsersResult = RoomUser[]
+
+export const getRoomUsers = functions.https.onCall(async (roomData: GetRoomUsersData, context): Promise<GetRoomUsersResult> => {
   const { roomId } = roomData
   const roomUsers = await getUsersInRoom(roomId)
   return roomUsers

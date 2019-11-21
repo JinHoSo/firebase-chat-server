@@ -4,7 +4,10 @@ import { HttpsError } from 'firebase-functions/lib/providers/https'
 import { User, UserId } from '..'
 import { getUserDocument } from '../lib/user'
 
-export const getMyProfile = functions.https.onCall(async (userData, context): Promise<User> => {
+export type GetUserProfileData = Pick<User, 'userId'>
+export type GetUserResult = User
+
+export const getMyProfile = functions.https.onCall(async (userData, context): Promise<GetUserResult> => {
   if (!context.auth) {
     throw new HttpsError('unauthenticated', 'user must be logged in')
   }
@@ -16,7 +19,7 @@ export const getMyProfile = functions.https.onCall(async (userData, context): Pr
   return myProfileData
 })
 
-export const getUserProfile = functions.https.onCall(async (userData: Pick<User, 'userId'>, context): Promise<User> => {
+export const getUserProfile = functions.https.onCall(async (userData: GetUserProfileData, context): Promise<GetUserResult> => {
   if (!context.auth) {
     throw new HttpsError('unauthenticated', 'user must be logged in')
   }

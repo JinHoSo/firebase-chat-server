@@ -1,15 +1,16 @@
 import * as functions from 'firebase-functions'
 import { HttpsError } from 'firebase-functions/lib/providers/https'
 
-import { Room, RoomId, UserId } from '..'
+import { Room, UserId } from '..'
 import { database } from '../lib/firebase'
+import { dateNowGenerator } from '../lib/generator/dateGenerator'
 import { updateRoomDocument } from '../lib/room'
 
-type JoinRoomArguments = {
-  roomId: RoomId
-}
+export type JoinRoomData = Pick<Room, 'roomId'>
 
-export const joinRoom = functions.https.onCall(async (roomData: JoinRoomArguments, context): Promise<true> => {
+export type JoinRoomResult = true
+
+export const joinRoom = functions.https.onCall(async (roomData: JoinRoomData, context): Promise<JoinRoomResult> => {
   if (!context.auth) {
     throw new HttpsError('unauthenticated', 'user must be logged in')
   }
@@ -18,9 +19,11 @@ export const joinRoom = functions.https.onCall(async (roomData: JoinRoomArgument
 
   const { roomId } = roomData
 
-  const joinedRoomData: Pick<Room, 'unreadMessageCount'> = {
-    unreadMessageCount: {
-      [myUserId]: 0,
+  const userLastSeenAt = dateNowGenerator()
+
+  const joinedRoomData: Pick<Room, 'usersLastSeenAt'> = {
+    usersLastSeenAt: {
+      [myUserId]: userLastSeenAt,
     },
   }
 

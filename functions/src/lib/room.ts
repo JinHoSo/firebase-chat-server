@@ -3,20 +3,24 @@ import { HttpsError } from 'firebase-functions/lib/providers/https'
 
 import { GroupRoom, PrivateRoom, Room, RoomId, Timestamp, UserId } from '..'
 import { roomCollection } from './firebase'
+import { dateNowGenerator } from './generator/dateGenerator';
+
+export type CreateRoomDocumentData = Omit<GroupRoom, 'roomId' | 'createdAt' | 'updatedAt'>
+export type UpdateRoomDocumentData = Partial<Omit<Room, 'roomId' | 'updatedAt'>>
 
 export const isExistsRoom = async (roomId: RoomId): Promise<boolean> => {
-  const roomDoc = await getRoomDocument(roomId)
+  const roomDoc = await roomCollection.doc(roomId).get()
   return roomDoc.exists
 }
 
-export const createRoomDocument = async (roomId: RoomId, roomData: Omit<GroupRoom, 'roomId' | 'createdAt' | 'updatedAt'>): Promise<WriteResult> => {
-  const newRoomCreatedAt = Date.now()
+export const createRoomDocument = async (roomId: RoomId, roomData: CreateRoomDocumentData): Promise<WriteResult> => {
+  const roomCreatedAt = dateNowGenerator()
 
   const newRoomData: GroupRoom = {
     ...roomData,
     roomId,
-    createdAt: newRoomCreatedAt,
-    updatedAt: newRoomCreatedAt
+    createdAt: roomCreatedAt,
+    updatedAt: roomCreatedAt
   }
 
   return await roomCollection
@@ -35,16 +39,18 @@ export const getRoomDocument = async (roomId: RoomId): Promise<DocumentSnapshot>
   return roomDoc
 }
 
-export const updateRoomDocument = async (roomId: RoomId, roomData: Partial<Omit<Room, 'roomId' | 'updatedAt'>>): Promise<WriteResult> => {
+export const updateRoomDocument = async (roomId: RoomId, roomData: UpdateRoomDocumentData): Promise<WriteResult> => {
   if (!(await isExistsRoom(roomId))) {
     throw new HttpsError('not-found', `room(${roomId} is not exists)`, {
       roomId
     })
   }
 
+  const roomUpdatedAt = dateNowGenerator()
+
   const updatedRoomData = {
     ...roomData,
-    updatedAt: Date.now()
+    updatedAt: roomUpdatedAt
   }
 
   return await roomCollection
@@ -59,8 +65,10 @@ export const deleteRoomDocument = async (roomId: RoomId): Promise<WriteResult> =
     })
   }
 
+  const roomDeletedAt = dateNowGenerator()
+
   const deletedRoomData: Pick<GroupRoom, 'deletedAt'> = {
-    deletedAt: Date.now()
+    deletedAt: roomDeletedAt
   }
 
   return await roomCollection
@@ -69,12 +77,6 @@ export const deleteRoomDocument = async (roomId: RoomId): Promise<WriteResult> =
 }
 
 export const cleanRoomDocument = async (roomId: RoomId): Promise<WriteResult> => {
-  if (!(await isExistsRoom(roomId))) {
-    throw new HttpsError('not-found', `room(${roomId} is not exists)`, {
-      roomId
-    })
-  }
-
   return await roomCollection
     .doc(roomId)
     .delete()
@@ -82,7 +84,6 @@ export const cleanRoomDocument = async (roomId: RoomId): Promise<WriteResult> =>
 
 export const getRoomDocumentsOrderByUpdatedAt = async (userId: UserId, limit = 30): Promise<QuerySnapshot> => {
   return await roomCollection
-    // .where(`userIdMap.${userId}`, '==', true)
     .where('userIdArray', 'array-contains', userId)
     .orderBy('updatedAt', 'desc')
     .limit(limit)
@@ -91,7 +92,6 @@ export const getRoomDocumentsOrderByUpdatedAt = async (userId: UserId, limit = 3
 
 export const getRoomDocumentsAfterUpdatedAt = async (userId: UserId, afterUpdatedAt: Timestamp, limit = 30): Promise<QuerySnapshot> => {
   return await roomCollection
-    // .where(`userIdMap.${userId}`, '==', true)
     .where('userIdArray', 'array-contains', userId)
     .where(`updatedAt`, '>', afterUpdatedAt)
     .orderBy('updatedAt', 'desc')
@@ -103,7 +103,6 @@ export const getRoomDocumentsAfterRoomIdAndOrderByUpdatedAt = async (userId: Use
   const endBeforeRoomDoc = await getRoomDocument(afterRoomId)
 
   return await roomCollection
-    // .where(`userIdMap.${userId}`, '==', true)
     .where('userIdArray', 'array-contains', userId)
     .orderBy('updatedAt', 'desc')
     .endBefore(endBeforeRoomDoc)
@@ -113,7 +112,6 @@ export const getRoomDocumentsAfterRoomIdAndOrderByUpdatedAt = async (userId: Use
 
 export const getRoomDocumentsAfterRoomDocumentAndOrderByUpdatedAt = async (userId: UserId, afterRoomDocument: DocumentSnapshot, limit = 30): Promise<QuerySnapshot> => {
   return await roomCollection
-    // .where(`userIdMap.${userId}`, '==', true)
     .where('userIdArray', 'array-contains', userId)
     .orderBy('updatedAt', 'desc')
     .endBefore(afterRoomDocument)

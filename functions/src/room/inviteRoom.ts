@@ -3,15 +3,18 @@ import * as functions from 'firebase-functions'
 import { HttpsError } from 'firebase-functions/lib/providers/https'
 
 import { GroupRoom, Room, RoomId, UserId } from '..'
+import { dateNowGenerator } from '../lib/generator/dateGenerator'
 import { getRoomDocument, updateRoomDocument } from '../lib/room'
 import { isExistsUser } from '../lib/user'
 
-type InviteRoomArguments = {
+export type InviteGroupRoomData = {
   receiverUserId: UserId
   roomId: RoomId
 }
 
-export const inviteGroupRoom = functions.https.onCall(async (roomData: InviteRoomArguments, context): Promise<GroupRoom> => {
+export type InviteGroupRoomResult = GroupRoom
+
+export const inviteGroupRoom = functions.https.onCall(async (roomData: InviteGroupRoomData, context): Promise<InviteGroupRoomResult> => {
   if (!context.auth) {
     throw new HttpsError('unauthenticated', 'user must be logged in')
   }
@@ -38,10 +41,12 @@ export const inviteGroupRoom = functions.https.onCall(async (roomData: InviteRoo
     })
   }
 
-  const updatedRoomData: Pick<Room, 'userIdArray' | 'unreadMessageCount'> = {
+  const userLastSeenAt = dateNowGenerator()
+
+  const updatedRoomData: Pick<Room, 'userIdArray' | 'usersLastSeenAt'> = {
     userIdArray: admin.firestore.FieldValue.arrayUnion(receiverUserId),
-    unreadMessageCount: {
-      [receiverUserId]: 0
+    usersLastSeenAt: {
+      [receiverUserId]: userLastSeenAt
     }
   }
 

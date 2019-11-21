@@ -72,19 +72,19 @@ export type RoomLastMessage = {
 }
 
 //Room type
-export interface PrivateRoom extends GroupRoom {
-  userIdMap: { [key: string]: boolean | FieldValue }
-}
-
 export interface GroupRoom {
   name?: string
   roomId: RoomId
   createdAt: Timestamp
   updatedAt: Timestamp
   deletedAt?: Timestamp
-  unreadMessageCount: { [key: string]: number | FieldValue }
+  usersLastSeenAt: { [key: string]: Timestamp | FieldValue }
   lastMessage?: RoomLastMessage
   userIdArray: UserId[] | FieldValue
+}
+
+export interface PrivateRoom extends GroupRoom {
+  userIdMap: { [key: string]: boolean | FieldValue }
 }
 
 export type Room = PrivateRoom | GroupRoom
@@ -102,10 +102,11 @@ export type Message = {
   replyMessageId?: MessageId
   roomId: RoomId
   senderUserId: UserId
-  receiverUserId: UserId
+  receiverUserId?: UserId
   text?: string
   media?: MessageMedia
   createdAt: Timestamp
+  updatedAt?: Timestamp
   deletedAt?: Timestamp
 }
 
@@ -116,6 +117,8 @@ export { getMyProfile, getUserProfile } from './user/getUser'
 export { createPrivateRoom, createGroupRoom } from './room/createRoom'
 export { getRoom, getRooms, getRoomsAfterRoomId, getRoomsAfterUpdatedAt } from './room/getRoom'
 export { joinRoom } from './room/joinRoom'
-export { leaveGroupRoom } from './room/leaveRoom'
+export { leaveGroupRoom as leaveRoom } from './room/leaveRoom'
 export { inviteGroupRoom } from './room/inviteRoom'
 export { getRoomUsers } from './room/roomUser'
+export { sendMessage } from './message/sendMessage'
+export { deleteMessage } from './message/deleteMessage'

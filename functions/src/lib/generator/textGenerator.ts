@@ -1,7 +1,7 @@
 import { MediaType, MessageMedia } from '../..'
 import { i18n } from '../../i18n/i18n'
 
-export const messageMediaToTextGenerator = (messageMedia: MessageMedia, locale: string): string => {
+export const messageMediaToTextGenerator = (messageMedia: MessageMedia, locale?: string): string => {
   if (!messageMedia || (messageMedia && !messageMedia.type)) {
     return ''
   }

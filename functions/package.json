@@ -10,15 +10,17 @@
     "deploy-firestore-indexes": "firebase deploy --only firestore:indexes",
     "logs": "firebase functions:log",
     "test": "mocha --timeout 10000 -r ts-node/register tests/**/*.test.ts",
-    "user-test": "mocha --timeout 10000 -r ts-node/register tests/user.test.ts",
-    "room-test": "mocha --timeout 10000 -r ts-node/register tests/room.test.ts",
-    "room-test-specific": "mocha --timeout 10000 -r ts-node/register tests/room.test.ts -g 'should leave kelvin from group room'"
+    "test-user": "mocha --timeout 10000 -r ts-node/register tests/user.test.ts",
+    "test-room": "mocha --timeout 10000 -r ts-node/register tests/room.test.ts",
+    "test-message": "mocha --timeout 10000 -r ts-node/register tests/message.test.ts",
+    "test-specific": "mocha --timeout 10000 -r ts-node/register tests/message.test.ts -g 'should get messages by updatedAt'"
   },
   "main": "lib/index.js",
   "dependencies": {
     "firebase-admin": "~7.0.0",
     "firebase-functions": "^2.2.0",
-    "i18n": "^0.8.4"
+    "i18n": "^0.8.4",
+    "short-uuid": "^3.1.1"
   },
   "devDependencies": {
     "@types/chai": "^4.2.5",
