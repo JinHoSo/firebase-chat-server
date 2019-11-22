@@ -20,8 +20,8 @@ export const deleteGroupRoom = functions.https.onCall(async (roomData: DeleteGro
   const myUserId = context.auth!.uid as UserId
   const { roomId } = roomData
 
-  const updatedRoom: Pick<Room, 'userIdArray' | 'usersLastSeenAt'> = {
-    usersLastSeenAt: {
+  const updatedRoom: Pick<Room, 'userIdArray' | 'userLastSeenAt'> = {
+    userLastSeenAt: {
       [myUserId]: admin.firestore.FieldValue.delete()
     },
     userIdArray: admin.firestore.FieldValue.arrayRemove(myUserId)

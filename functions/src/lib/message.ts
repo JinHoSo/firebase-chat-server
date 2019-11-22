@@ -97,6 +97,12 @@ export const getMessageDocument = async (roomId: RoomId, messageId: MessageId): 
   return messageDoc
 }
 
+export const getMessageData = async (roomId: RoomId, messageId: MessageId): Promise<Message> => {
+  const messageDoc = await getMessageDocument(roomId, messageId)
+
+  return messageDoc.data() as Message
+}
+
 export const updateTextMessageDocument = async (roomId: RoomId, messageId: MessageId, text: string): Promise<WriteResult> => {
   if (!(await isExistsMessage(roomId, messageId))) {
     throw new HttpsError('not-found', `message(${messageId}) in the room(${roomId}) is not exists`, {

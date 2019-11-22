@@ -55,7 +55,8 @@ export type User = {
   nickname: string
   locale: string
   avatar?: Uri
-  pushToken?: string
+  activePushToken?: string
+  pushTokens: string[]
   registeredAt: Timestamp
   updatedAt?: Timestamp
   leftAt?: Timestamp
@@ -83,7 +84,7 @@ export interface GroupRoom {
   createdAt: Timestamp
   updatedAt: Timestamp
   deletedAt?: Timestamp
-  usersLastSeenAt: { [key: string]: Timestamp | FieldValue }
+  userLastSeenAt: { [key: string]: Timestamp | FieldValue }
   lastMessage?: RoomLastMessage
   userIdArray: UserId[] | FieldValue
 }

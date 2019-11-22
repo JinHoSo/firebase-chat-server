@@ -54,13 +54,13 @@ export const createPrivateRoom = functions.https.onCall(async (roomData: CreateP
     const newPrivateRoomId = roomIdGenerator()
     const userLastSeenAt = dateNowGenerator()
 
-    const newPrivateRoom: Pick<PrivateRoom, 'userIdMap' | 'userIdArray' | 'usersLastSeenAt'> = {
+    const newPrivateRoom: Pick<PrivateRoom, 'userIdMap' | 'userIdArray' | 'userLastSeenAt'> = {
       userIdMap: {
         [senderUserId]: true,
         [receiverUserId]: true,
       },
       userIdArray: [senderUserId, receiverUserId],
-      usersLastSeenAt: {
+      userLastSeenAt: {
         [senderUserId]: userLastSeenAt,
         [receiverUserId]: userLastSeenAt,
       },
@@ -105,17 +105,17 @@ export const createGroupRoom = functions.https.onCall(async (roomData: CreateGro
 
   const newRoomId = roomIdGenerator()
 
-  const userLastSeenAt = dateNowGenerator()
-  const usersLastSeenAt = receiverUserIds.reduce((accumulator, receiverUserId) => {
-    accumulator[receiverUserId] = userLastSeenAt
+  const lastSeenAt = dateNowGenerator()
+  const userLastSeenAt = receiverUserIds.reduce((accumulator, receiverUserId) => {
+    accumulator[receiverUserId] = lastSeenAt
     return accumulator
-  }, { [senderUserId]: userLastSeenAt })
+  }, { [senderUserId]: lastSeenAt })
 
   const userIdArray = [senderUserId, ...receiverUserIds]
 
-  const newRoom: Pick<GroupRoom, 'userIdArray' | 'usersLastSeenAt'> = {
-    userIdArray: userIdArray,
-    usersLastSeenAt: usersLastSeenAt,
+  const newRoom: Pick<GroupRoom, 'userIdArray' | 'userLastSeenAt'> = {
+    userIdArray,
+    userLastSeenAt,
   }
 
   await createRoomDocument(newRoomId, newRoom)

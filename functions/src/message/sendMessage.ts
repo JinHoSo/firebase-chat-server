@@ -1,14 +1,19 @@
 import * as functions from 'firebase-functions'
 import { HttpsError } from 'firebase-functions/lib/providers/https'
 
-import { Message, OnlineState, User, UserId, UserOnlineStatus, GroupMessage } from '..'
-import { database, messaging, roomCollection } from '../lib/firebase'
+import { GroupMessage, PrivateMessage, User, UserId } from '..'
+import { roomCollection } from '../lib/firebase'
 import { dateNowGenerator } from '../lib/generator/dateGenerator'
 import { messageIdGenerator } from '../lib/generator/idGenerator'
-import { messageMediaToTextGenerator } from '../lib/generator/textGenerator'
-import { createGroupMessageDocument, CreateGroupMessageDocumentData, createPrivateMessageDocument } from '../lib/message'
-import { getUserDocument } from '../lib/user'
-import { PrivateMessage } from '../index';
+import {
+  createGroupMessageDocument,
+  CreateGroupMessageDocumentData,
+  createPrivateMessageDocument,
+  CreatePrivateMessageDocumentData,
+} from '../lib/message'
+import { pushNotification } from '../lib/pushNotification'
+import { getRoomData } from '../lib/room'
+import { getUserData, getUserDocument } from '../lib/user'
 
 export type SendPrivateMessageData = Omit<PrivateMessage, 'senderUserId' | 'messageId' | 'createdAt' | 'deletedAt'>
 export type SendPrivateMessageResult = Pick<PrivateMessage, 'roomId' | 'requestedId' | 'messageId' | 'createdAt'>
@@ -21,8 +26,6 @@ export const sendPrivateMessage = functions.https.onCall(async (messageData: Sen
     throw new HttpsError('unauthenticated', 'user must be logged in')
   }
 
-  const senderUserId: UserId = context.auth!.uid as UserId
-
   const {
     requestedId,
     roomId,
@@ -30,33 +33,33 @@ export const sendPrivateMessage = functions.https.onCall(async (messageData: Sen
     media
   } = messageData
 
-  const senderDoc = await getUserDocument(senderUserId)
-  const sender = senderDoc.data() as User
-
-  const messageCreatedAt = dateNowGenerator()
+  const senderUserId: UserId = context.auth!.uid as UserId
   const messageId = messageIdGenerator()
 
-  const newMessage: CreateGroupMessageDocumentData = {
+  const newPrivateMessage: CreatePrivateMessageDocumentData = {
     requestedId,
     senderUserId,
     text,
     media
   }
 
-  await createPrivateMessageDocument(roomId, messageId, newMessage)
+  const writeResult = await createPrivateMessageDocument(roomId, messageId, newPrivateMessage)
+  const createdAt = writeResult.writeTime.toMillis()
 
-  await roomCollection.doc(roomId).set({
-    lastMessage: newMessage,
-    updatedAt: messageCreatedAt,
+  roomCollection.doc(roomId).set({
+    lastMessage: newPrivateMessage,
+    updatedAt: createdAt,
   }, {
     merge: true
   })
+
+  pushNotification(senderUserId, roomId, text, media)
 
   return {
     roomId,
     requestedId,
     messageId,
-    createdAt: messageCreatedAt
+    createdAt
   }
 })
 
@@ -103,36 +106,8 @@ export const sendGroupMessage = functions.https.onCall(async (messageData: SendG
     merge: true
   })
 
-  if (receiverUserId) {
-    const receiverDoc = await getUserDocument(receiverUserId)
-    const receiver = receiverDoc.data() as User
-
-    const receiverStatusStore = database.ref('/status/' + receiverUserId)
-    const receiverStatusSnapshot = await receiverStatusStore.once('value')
-    const receiverStatue = receiverStatusSnapshot.val() as UserOnlineStatus
-    const isReceiverOnline = receiverStatue && receiverStatue.state === OnlineState.ONLINE ? true : false
-    // const isJoinedConversationNow = receiverStatue && receiverStatue.joinedRoomId ? receiverStatue.joinedRoomId === roomId : false
-
-    //send push notification
-    if (receiver.pushToken && !isReceiverOnline) {
-      const payload = {
-        notification: {
-          title: sender.nickname,
-          body: media ? messageMediaToTextGenerator(media, receiver.locale) : text,
-          sound: 'default',
-          badge: '1',
-        },
-        data: {
-          roomId,
-          senderUserId,
-          senderUserNickname: sender.nickname,
-        },
-      }
-
-      await messaging.sendToDevice(receiver.pushToken, payload)
-    }
-  }
-
+  pushNotification(senderUserId, roomId, text, media)
+  
   return {
     roomId,
     requestedId,
