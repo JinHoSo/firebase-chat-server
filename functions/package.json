@@ -13,7 +13,7 @@
     "test-user": "mocha --timeout 10000 -r ts-node/register tests/user.test.ts",
     "test-room": "mocha --timeout 10000 -r ts-node/register tests/room.test.ts",
     "test-message": "mocha --timeout 10000 -r ts-node/register tests/message.test.ts",
-    "test-specific": "mocha --timeout 10000 -r ts-node/register tests/message.test.ts -g 'should get messages by updatedAt'"
+    "test-specific": "mocha --timeout 10000 -r ts-node/register tests/message.test.ts -g 'test sending message time'"
   },
   "main": "lib/index.js",
   "dependencies": {

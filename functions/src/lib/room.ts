@@ -39,6 +39,12 @@ export const getRoomDocument = async (roomId: RoomId): Promise<DocumentSnapshot>
   return roomDoc
 }
 
+export const getRoomData = async (roomId: RoomId): Promise<Room> => {
+  const roomDoc = await getRoomDocument(roomId)
+
+  return roomDoc.data() as Room
+}
+
 export const updateRoomDocument = async (roomId: RoomId, roomData: UpdateRoomDocumentData): Promise<WriteResult> => {
   if (!(await isExistsRoom(roomId))) {
     throw new HttpsError('not-found', `room(${roomId} is not exists)`, {

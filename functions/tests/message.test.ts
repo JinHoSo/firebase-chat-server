@@ -35,7 +35,6 @@ describe('Test for message', () => {
   const smithAuthUid = 'smith'
   const markAuthUid = 'mark'
   const alvinAuthUid = 'alvin'
-  const kelvinAuthUid = 'kelvin'
 
   it('should register an user Smith', async () => {
     const smith = await testWrap<RegisterUserData, RegisterUserResult>(registerUser, {
@@ -77,20 +76,6 @@ describe('Test for message', () => {
     })
 
     expect(alvin.userId).to.not.equal(null)
-  })
-
-  it('should register an user Kelvin', async () => {
-    const kelvin = await testWrap<RegisterUserData, RegisterUserResult>(registerUser, {
-      nickname: 'Kelvin',
-      phoneNumber: '821076546513',
-      locale: 'ko-KR'
-    }, {
-      auth: {
-        uid: kelvinAuthUid
-      },
-    })
-
-    expect(kelvin.userId).to.not.equal(null)
   })
 
   it('should send a message to smith-mark private room', async () => {
@@ -165,7 +150,7 @@ describe('Test for message', () => {
 
     const requestedId = 'requestId'
     const roomId = room.roomId
-    const receiverUserId = kelvinAuthUid
+    const receiverUserId = markAuthUid
 
     await testWrap<SendGroupMessageData, SendGroupMessageResult>(sendGroupMessage, {
       requestedId,
@@ -184,7 +169,7 @@ describe('Test for message', () => {
       text: 'Hello3'
     }, {
       auth: {
-        uid: kelvinAuthUid
+        uid: markAuthUid
       }
     })
 
@@ -211,7 +196,7 @@ describe('Test for message', () => {
     const room = rooms.find(room => (room.userIdArray as UserId[]).length > 2) as Room
     const requestedId = 'requestId'
     const roomId = room.roomId
-    const receiverUserId = kelvinAuthUid
+    const receiverUserId = markAuthUid
     const testText = 'Hi2'
 
     const sentMessage1 = await testWrap<SendGroupMessageData, SendGroupMessageResult>(sendGroupMessage, {
@@ -221,7 +206,7 @@ describe('Test for message', () => {
       text: testText
     }, {
       auth: {
-        uid: alvinAuthUid
+        uid: smithAuthUid
       }
     })
 
@@ -231,7 +216,7 @@ describe('Test for message', () => {
       text: 'Hi3'
     }, {
       auth: {
-        uid: kelvinAuthUid
+        uid: smithAuthUid
       }
     })
 
@@ -260,7 +245,7 @@ describe('Test for message', () => {
     const room = rooms.find(room => (room.userIdArray as UserId[]).length > 2) as Room
     const requestedId = 'requestId'
     const roomId = room.roomId
-    const receiverUserId = kelvinAuthUid
+    const receiverUserId = alvinAuthUid
     const testText = 'Hi2'
 
     const sentMessage1 = await testWrap<SendGroupMessageData, SendGroupMessageResult>(sendGroupMessage, {
@@ -270,7 +255,7 @@ describe('Test for message', () => {
       text: testText
     }, {
       auth: {
-        uid: alvinAuthUid
+        uid: smithAuthUid
       }
     })
 
@@ -280,7 +265,7 @@ describe('Test for message', () => {
       text: 'Hi3'
     }, {
       auth: {
-        uid: kelvinAuthUid
+        uid: smithAuthUid
       }
     })
 
@@ -301,7 +286,6 @@ describe('Test for message', () => {
     await cleanUserDocument(smithAuthUid)
     await cleanUserDocument(markAuthUid)
     await cleanUserDocument(alvinAuthUid)
-    await cleanUserDocument(kelvinAuthUid)
 
     const rooms = await testWrap<GetRoomsData, GetRoomsResult>(getRooms, {
       pageLimit: 15
@@ -315,4 +299,37 @@ describe('Test for message', () => {
 
     console.log('clear all tests')
   })
+
+  // it('should smith-mark private room', async () => {
+  //   const smithMarkPrivateRoom = await testWrap<CreatePrivateRoomData, CreatePrivateRoomResult>(createPrivateRoom, {
+  //     receiverUserId: markAuthUid
+  //   }, {
+  //     auth: {
+  //       uid: smithAuthUid
+  //     }
+  //   })
+
+  //   expect(smithMarkPrivateRoom.roomId).to.not.equal(null)
+  // })
+
+  // it('test sending message time', async () => {
+  //   const requestedId = 'requestId'
+  //   const roomId = 'wFqvQgTRNN9oM4brVa5tLP'
+  //   const receiverUserId = markAuthUid
+  //   const text = 'Hello'
+
+  //   const sentMessage = await testWrap<SendPrivateMessageData, SendPrivateMessageResult>(sendPrivateMessage, {
+  //     requestedId,
+  //     roomId,
+  //     text
+  //   }, {
+  //     auth: {
+  //       uid: smithAuthUid
+  //     }
+  //   })
+
+  //   expect(sentMessage.roomId).to.equal(roomId)
+  //   expect(sentMessage.requestedId).to.equal(requestedId)
+  //   expect(sentMessage.messageId).to.not.be.undefined
+  // })
 })

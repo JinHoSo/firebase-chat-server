@@ -36,9 +36,9 @@ export const inviteGroupRoom = functions.https.onCall(async (roomData: InviteGro
 
   const userLastSeenAt = dateNowGenerator()
 
-  const updatedRoomData: Pick<Room, 'userIdArray' | 'usersLastSeenAt'> = {
+  const updatedRoomData: Pick<Room, 'userIdArray' | 'userLastSeenAt'> = {
     userIdArray: admin.firestore.FieldValue.arrayUnion(receiverUserId),
-    usersLastSeenAt: {
+    userLastSeenAt: {
       [receiverUserId]: userLastSeenAt
     }
   }

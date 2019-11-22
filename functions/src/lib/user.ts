@@ -3,10 +3,10 @@ import { HttpsError } from 'firebase-functions/lib/providers/https'
 
 import { Room, RoomId, RoomUser, User, UserId } from '..'
 import { COLLECTION_GROUP_USER_NAME, firestore, userCollection } from './firebase'
+import { dateNowGenerator } from './generator/dateGenerator'
 import { getRoomDocument } from './room'
-import { dateNowGenerator } from './generator/dateGenerator';
 
-export type CreateUserDocumentData = Omit<User, 'userId' | 'registeredAt'>
+export type CreateUserDocumentData = Pick<User, 'nickname' | 'phoneNumber' | 'locale' | 'avatar' | 'activePushToken'>
 export type UpdateUserDocumentData = Partial<Omit<User, 'userId'>>
 
 export const isExistsUser = async (userId: UserId): Promise<boolean> => {
@@ -40,6 +40,12 @@ export const getUserDocument = async (userId: UserId): Promise<DocumentSnapshot>
   return await userCollection.doc(userId).get()
 }
 
+export const getUserData = async (userId: UserId): Promise<User> => {
+  const userDoc = await getUserDocument(userId)
+
+  return userDoc.data() as User
+}
+
 //Retrieve users include user who do not exists or have left.
 export const getUserDocuments = async (userIds: UserId[]): Promise<DocumentSnapshot[]> => {
   const userRefs = userIds.map(userId => firestore.doc(`${COLLECTION_GROUP_USER_NAME}/${userId}`))
@@ -57,9 +63,11 @@ export const createUserDocument = async (userId: UserId, userData: CreateUserDoc
   else {
     const userRegisteredAt = dateNowGenerator()
 
+    const pushTokens = userData.activePushToken ? [userData.activePushToken] : []
     const newUser: User = {
       ...userData,
       userId,
+      pushTokens,
       registeredAt: userRegisteredAt
     }
 

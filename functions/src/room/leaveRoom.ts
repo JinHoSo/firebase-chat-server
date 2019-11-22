@@ -21,8 +21,8 @@ export const leaveGroupRoom = functions.https.onCall(async (roomData: LeaveGroup
 
   const userLastSeenAt = dateNowGenerator()
 
-  const joinedRoomData: Pick<Room, 'usersLastSeenAt'> = {
-    usersLastSeenAt: {
+  const joinedRoomData: Pick<Room, 'userLastSeenAt'> = {
+    userLastSeenAt: {
       [myUserId]: userLastSeenAt,
     },
   }
