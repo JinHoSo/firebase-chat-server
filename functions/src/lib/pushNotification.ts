@@ -1,6 +1,6 @@
 import { MessageMedia, OnlineState, RoomId, User, UserId, UserOnlineStatus } from '..'
 import { database, messaging } from './firebase'
-import { messageMediaToTextGenerator } from './generator/textGenerator'
+import { notificationMessageMediaToTextGenerator, notificationMessageMediaToLocGenerator } from './generator/textGenerator';
 import { getRoomData } from './room'
 import { getUserDocuments, updateUserDocument } from './user'
 
@@ -25,13 +25,21 @@ export const pushNotificationToDevice = async (sender: User, receiver: User, roo
 
   //send push notification
   if (receiver.pushTokens && receiver.pushTokens.length > 0 && !isReceiverOnline) {
+    const notification:{[key:string]:string} = {
+      title: sender.nickname,
+      sound: 'default',
+      badge: '1',
+    }
+
+    if(media){
+      notification['body_loc_key'] = notificationMessageMediaToLocGenerator(media)
+    }
+    else if(text){
+      notification['body'] = text
+    }
+
     const payload = {
-      notification: {
-        title: sender.nickname,
-        body: media ? messageMediaToTextGenerator(media, receiver.locale) : text,
-        sound: 'default',
-        badge: '1',
-      },
+      notification: notification,
       data: {
         roomId,
         senderUserId: sender.userId,
@@ -60,6 +68,6 @@ export const pushNotificationToDevice = async (sender: User, receiver: User, roo
       updateUserDocument(receiver.userId, {
         pushTokens: newPushTokens
       })
-    }
+    } 
   }
 }
