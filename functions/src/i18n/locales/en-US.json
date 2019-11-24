@@ -1,5 +1,6 @@
 {
   "image":"Image",
   "video":"Video",
-  "voice":"Voice"
+  "voice":"Voice",
+  "notificationNewMessage":"New message"
 }
