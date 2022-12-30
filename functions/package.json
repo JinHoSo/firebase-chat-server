@@ -30,7 +30,7 @@
     "chai": "^4.2.0",
     "firebase-functions-test": "^0.1.7",
     "jasmine": "^3.5.0",
-    "mocha": "^6.2.2",
+    "mocha": "^10.2.0",
     "ts-node": "^8.5.0",
     "typescript": "^3.2.2"
   },
